@@ -29,6 +29,13 @@
       "skillPath": "plugins/javascript-typescript/skills/nodejs-backend-patterns/SKILL.md",
       "computedHash": "e478380e9c9d245d0c4caf6574d00934aca71fc62101e571262cdd26f958f4f1"
     },
+    "playwright": {
+      "source": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "sourceType": "github",
+      "skillPath": "skills/.curated/playwright/SKILL.md",
+      "computedHash": "d4ba899ecfb8c4b72c52bf11527e308ae07427483380feae0d518ea7d09bb844"
+    },
     "playwright-e2e-testing": {
       "source": "Perdolique/workflow",
       "commit": "eb7d0f1afc3fa764028d1bf306a7a7a5010624f4",
@@ -42,6 +49,13 @@
       "sourceType": "github",
       "skillPath": "skills/sc-lang-typescript/SKILL.md",
       "computedHash": "c3c8ad8cdc8c3e72698e79885c62d971267e3aef13a09d783a8701093e857137"
+    },
+    "security-best-practices": {
+      "source": "openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "sourceType": "github",
+      "skillPath": "skills/.curated/security-best-practices/SKILL.md",
+      "computedHash": "f3a018deca655724357a5576d36026b78f174a97094d42d3ef5f7ff08c9c1f27"
     },
     "tanstack-query": {
       "source": "tanstack-skills/tanstack-skills",
