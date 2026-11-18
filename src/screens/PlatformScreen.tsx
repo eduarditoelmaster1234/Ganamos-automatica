@@ -21,7 +21,7 @@ import {
   RefreshIcon,
   ShieldIcon,
   BellIcon,
-  ChatIcon,
+  WhatsAppBubbleIcon,
   DownloadIcon,
 } from '../components/icons'
 import { SupportChat } from '../components/SupportChat'
@@ -35,7 +35,7 @@ export function PlatformScreen({
   backendReachable,
   backendChecking,
   canInstall,
-  onRequestInstall,
+  onInstallClick,
   onOpenNotifications,
   onOpenLegal,
   onSignOut,
@@ -46,7 +46,7 @@ export function PlatformScreen({
   backendReachable: boolean
   backendChecking: boolean
   canInstall: boolean
-  onRequestInstall: () => void
+  onInstallClick: () => void
   onOpenNotifications: () => void
   onOpenLegal: (type: LegalDocumentType) => void
   onSignOut: () => void
@@ -117,17 +117,19 @@ export function PlatformScreen({
 
   return (
     <GanamosBackground>
-      <div className="relative h-dvh w-screen overflow-hidden">
+      <div className="relative isolate h-dvh w-screen overflow-hidden">
         {!showFallback && (
-          <iframe
-            key={reloadKey}
-            src={appConfig.platformUrl}
-            title={`Plataforma ${appConfig.brandName}`}
-            onLoad={() => setIframeStatus('ready')}
-            allow="clipboard-write; clipboard-read; fullscreen; autoplay"
-            referrerPolicy="no-referrer-when-downgrade"
-            className="h-dvh w-screen max-w-full border-0 bg-white"
-          />
+          <div className="absolute inset-0 z-0">
+            <iframe
+              key={reloadKey}
+              src={appConfig.platformUrl}
+              title={`Plataforma ${appConfig.brandName}`}
+              onLoad={() => setIframeStatus('ready')}
+              allow="clipboard-write; clipboard-read; fullscreen; autoplay"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="h-full w-full border-0 bg-white"
+            />
+          </div>
         )}
 
         {iframeStatus === 'loading' && !showFallback && (
@@ -295,27 +297,46 @@ export function PlatformScreen({
           )}
         </div>
 
-        {/* Chat abierto automáticamente */}
-        {chatOpen ? (
-          <SupportChat
-            account={account}
-            credentials={credentials}
-            online={online}
-            backendReachable={backendReachable}
-            backendChecking={backendChecking}
-            canInstall={canInstall}
-            onMinimize={closeChat}
-            onRequestInstall={onRequestInstall}
-          />
-        ) : (
-          <div className="absolute bottom-0 right-0 z-40 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pr-4">
+        {/* Chat montado siempre: minimizar conserva mensajes, formularios y scroll. */}
+        <SupportChat
+          open={chatOpen}
+          account={account}
+          credentials={credentials}
+          online={online}
+          backendReachable={backendReachable}
+          backendChecking={backendChecking}
+          canInstall={canInstall}
+          onMinimize={closeChat}
+          onInstallClick={onInstallClick}
+        />
+
+        {/* Widget flotante minimizado */}
+        {!chatOpen && (
+          <div className="absolute bottom-0 right-0 z-40 flex animate-pop-in flex-col items-end gap-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] pr-4">
+            <button
+              type="button"
+              onClick={openChat}
+              className="flex min-h-[44px] animate-widget-bounce items-center justify-center rounded-full bg-[#22C55E] px-4 py-2.5 shadow-[0_10px_28px_-8px_rgba(34,197,94,0.75)] ring-1 ring-white/20 transition active:scale-95"
+            >
+              <span className="text-[12px] font-extrabold uppercase tracking-wide text-[#052E16]">
+                ↓ CARGAS / RETIROS ↓
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={openChat}
               aria-label="Abrir chat de soporte"
-              className="relative flex h-14 w-14 items-center justify-center rounded-full bg-success text-white shadow-floating transition hover:brightness-110 active:scale-95"
+              className="relative flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#22C55E] text-white shadow-[0_14px_34px_-8px_rgba(34,197,94,0.8)] ring-1 ring-white/25 transition hover:brightness-105 active:scale-95"
             >
-              <ChatIcon width={26} height={26} />
+              <span
+                className="pointer-events-none absolute inset-0 animate-ring-pulse rounded-full border-2 border-[#22C55E]"
+                aria-hidden
+              />
+              <WhatsAppBubbleIcon width={32} height={32} className="relative" />
+              <span className="absolute -right-1.5 -top-1.5 flex h-[23px] w-[23px] animate-badge-pop items-center justify-center rounded-full border-2 border-[#0D061A] bg-[#EF4444] text-[11px] font-bold leading-none text-white">
+                1
+              </span>
             </button>
           </div>
         )}
@@ -325,7 +346,7 @@ export function PlatformScreen({
           <div className="absolute bottom-0 left-3 z-30 pb-[calc(env(safe-area-inset-bottom,0px)+18px)]">
             <button
               type="button"
-              onClick={onRequestInstall}
+              onClick={onInstallClick}
               className="flex items-center gap-1.5 rounded-full border border-borderSubtle bg-bg-elevated/90 px-3 py-2 text-[11px] font-semibold text-ink-primary shadow-floating backdrop-blur-md"
             >
               <DownloadIcon width={15} height={15} className="text-primary-soft" />

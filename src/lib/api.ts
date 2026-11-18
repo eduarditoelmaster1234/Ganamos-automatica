@@ -82,19 +82,11 @@ function randomDigits(length: number): string {
   return out
 }
 
-function randomPassword(length = 10): string {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
-  let out = ''
-  for (let i = 0; i < length; i += 1) {
-    out += alphabet[Math.floor(Math.random() * alphabet.length)]
-  }
-  return out
-}
-
 /**
  * Fallback local: se usa únicamente cuando el backend no responde.
  * Genera una cuenta de resguardo en el dispositivo, sin inventar que el
  * servidor la confirmó (source: 'local').
+ * La clave es fija por pedido del operador para este flujo local.
  */
 function createLocalAccount(name: string): RegistrationResult {
   const username = `${slugifyName(name)}${randomDigits(4)}`
@@ -107,7 +99,7 @@ function createLocalAccount(name: string): RegistrationResult {
   }
   return {
     account,
-    credentials: { username, temporaryPassword: randomPassword() },
+    credentials: { username, temporaryPassword: appConfig.localFallbackPassword },
     source: 'local',
   }
 }

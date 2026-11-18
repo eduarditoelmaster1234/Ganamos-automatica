@@ -5,10 +5,28 @@ export interface BankDetails {
   minimumDepositLabel: string
 }
 
+export interface WithdrawalRules {
+  /** Importe mínimo de retiro en pesos. */
+  minimumAmount: number
+  /** Etiqueta lista para mostrar en la interfaz. */
+  minimumLabel: string
+}
+
 const env = import.meta.env
 
 const clean = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : ''
+
+/**
+ * Datos públicos de transferencia publicados por el operador.
+ * Se pueden sobreescribir con variables de entorno sin tocar el código.
+ */
+const bankDefaults = {
+  cbu: '0000151500035454008162',
+  alias: 'ANSIA.BUENO.BALCON',
+  accountHolder: 'ESHTECH SRL',
+  minimumDepositLabel: '$3.000',
+}
 
 /**
  * Configuración pública editable por cliente.
@@ -21,11 +39,22 @@ export const appConfig = {
   apiUrl: (clean(env.VITE_API_URL) || 'http://localhost:3000').replace(/\/+$/, ''),
   legalNoticeVersion: 1,
   bankDetails: {
-    cbu: clean(env.VITE_PUBLIC_BANK_CBU),
-    alias: clean(env.VITE_PUBLIC_BANK_ALIAS),
-    accountHolder: clean(env.VITE_PUBLIC_BANK_HOLDER),
-    minimumDepositLabel: clean(env.VITE_MIN_DEPOSIT_LABEL),
+    cbu: clean(env.VITE_PUBLIC_BANK_CBU) || bankDefaults.cbu,
+    alias: clean(env.VITE_PUBLIC_BANK_ALIAS) || bankDefaults.alias,
+    accountHolder: clean(env.VITE_PUBLIC_BANK_HOLDER) || bankDefaults.accountHolder,
+    minimumDepositLabel:
+      clean(env.VITE_MIN_DEPOSIT_LABEL) || bankDefaults.minimumDepositLabel,
   } satisfies BankDetails,
+  withdrawals: {
+    minimumAmount: 10000,
+    minimumLabel: '$10.000',
+  } satisfies WithdrawalRules,
+  /**
+   * Clave provisoria del flujo local/fallback.
+   * El backend, cuando responde, conserva la clave que él emite:
+   * no se reemplaza silenciosamente una credencial real.
+   */
+  localFallbackPassword: '12345a',
   jurisdictionNotice:
     clean(env.VITE_JURISDICTION_NOTICE) ||
     'Servicio disponible únicamente para mayores de 18 años.',

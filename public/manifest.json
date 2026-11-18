@@ -4,6 +4,7 @@
   "description": "Creá tu cuenta gratis en Ganamos y accedé a la plataforma con soporte integrado.",
   "lang": "es-AR",
   "dir": "ltr",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

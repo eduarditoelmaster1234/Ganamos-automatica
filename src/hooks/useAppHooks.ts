@@ -42,14 +42,16 @@ export function usePwaInstall() {
       setPromptEvent(null)
     }
     const media = window.matchMedia?.('(display-mode: standalone)')
+    const onDisplayModeChange = () => setIsInstalled(detectStandalone())
 
     window.addEventListener('beforeinstallprompt', onBeforeInstall)
     window.addEventListener('appinstalled', onInstalled)
-    media?.addEventListener?.('change', () => setIsInstalled(detectStandalone()))
+    media?.addEventListener?.('change', onDisplayModeChange)
 
     return () => {
       window.removeEventListener('beforeinstallprompt', onBeforeInstall)
       window.removeEventListener('appinstalled', onInstalled)
+      media?.removeEventListener?.('change', onDisplayModeChange)
     }
   }, [])
 

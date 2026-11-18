@@ -29,10 +29,10 @@ de entorno públicas (ver `.env.example`):
 | Variable | Descripción | Default |
 |---|---|---|
 | `VITE_API_URL` | URL base del backend | `http://localhost:3000` |
-| `VITE_PUBLIC_BANK_CBU` | CBU público para transferencias | vacío |
-| `VITE_PUBLIC_BANK_ALIAS` | Alias público | vacío |
-| `VITE_PUBLIC_BANK_HOLDER` | Titular de la cuenta | vacío |
-| `VITE_MIN_DEPOSIT_LABEL` | Monto mínimo informativo | vacío |
+| `VITE_PUBLIC_BANK_CBU` | CBU público para transferencias | `0000151500035454008162` |
+| `VITE_PUBLIC_BANK_ALIAS` | Alias público | `ANSIA.BUENO.BALCON` |
+| `VITE_PUBLIC_BANK_HOLDER` | Titular de la cuenta | `ESHTECH SRL` |
+| `VITE_MIN_DEPOSIT_LABEL` | Monto mínimo informativo | `$3.000` |
 | `VITE_JURISDICTION_NOTICE` | Aviso legal +18 | aviso estándar |
 
 `appConfig` expone además:
@@ -43,11 +43,20 @@ domain: 'ganamos.net'
 platformUrl: 'https://ganamos.net'
 apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000'
 bankDetails: { cbu, alias, accountHolder, minimumDepositLabel }
+withdrawals: { minimumAmount: 10000, minimumLabel: '$10.000' }
+localFallbackPassword: '12345a'
 ```
 
-Si los datos bancarios quedan vacíos, el chat muestra el estado pendiente y
-**no inventa datos**. Para previsualizar la tarjeta de transferencia en
-desarrollo, `.env.example` incluye valores demo claramente identificados.
+Los datos bancarios salen siempre de `appConfig.bankDetails`: el chat no
+contiene valores hardcodeados. Si se dejan vacíos, el chat muestra el estado
+pendiente y **no inventa datos**. Los defaults actuales corresponden a los
+datos públicos de transferencia del operador mostrados en las capturas de
+referencia y pueden sobreescribirse por entorno sin tocar el código.
+
+La clave del flujo local/fallback es fija (`12345a`) por pedido del operador.
+Cuando el backend responde, la app **no reemplaza** la contraseña emitida por
+el servidor: si en producción se exige una clave individual, hay que adaptar
+esa política en el backend antes de usar la clave fija.
 
 ## Flujo implementado
 
@@ -62,27 +71,44 @@ desarrollo, `.env.example` incluye valores demo claramente identificados.
 2. **Cuenta creada** (`src/screens/AccountCreatedScreen.tsx`)
    - Check verde, `USUARIO` y `CLAVE` copiables en un toque con feedback
      “¡Copiado! ✓”, botón verde “Continuar a mi cuenta”.
+   - En modo local/fallback la clave mostrada es exactamente `12345a`.
    - La clave temporal vive **solo en memoria**; nunca se persiste.
 3. **Plataforma** (`src/screens/PlatformScreen.tsx`)
-   - `<iframe src="https://ganamos.net" />` a pantalla completa (`w-screen h-dvh`).
+   - `<iframe src="https://ganamos.net" />` a pantalla completa dentro de un
+     contenedor `relative isolate` (evita que el iframe tape chat y widget).
    - Píldora flotante superior con usuario y menú de credenciales copiables,
      notificaciones, juego responsable, minimizar y cerrar sesión.
    - Fallback honesto con reintento y apertura externa si el sitio no carga.
-   - Chat abierto automáticamente al entrar.
+   - Chat montado siempre: minimizarlo conserva mensajes, formularios y scroll.
+   - Widget flotante inferior derecho con píldora `↓ CARGAS / RETIROS ↓`,
+     botón circular verde, pulso y badge rojo `1`.
 4. **Chat estilo WhatsApp** (`src/components/SupportChat.tsx`)
-   - Header verde, estado real (`en línea`, `conectando…`, `sin conexión`,
-     `modo demostración`, `configuración pendiente`).
-   - Tarjeta de CBU/Alias/Titular con “Copiar CBU” y “Copiar ALIAS”.
-   - “SUBIR COMPROBANTE” con preview, validación de formato (JPG/PNG/WebP/PDF)
-     y límite de 10 MB.
+   - Header verde `#075E54` con avatar circular del perrito VIP
+     (`public/dog-avatar.jpg`), título “Chat” y estado real (`en línea`,
+     `conectando…`, `sin conexión`, `modo demostración`, `configuración pendiente`).
+   - Tarjeta de CARGAR insertada una sola vez con CBU/Alias/Titular, monto
+     mínimo, “Copiar CBU”/“Copiar ALIAS” con `¡Copiado! ✓` y
+     “SUBIR COMPROBANTE” (preview + imagen en el hilo; JPG/PNG/WebP/PDF,
+     límite 10 MB). Sin backend se informa recepción local, nunca bancaria.
+   - Tarjeta interactiva de RETIRAR con `SALDO ACTUAL $0`, validación de monto
+     (obligatorio, numérico, sin negativos, mínimo `$10.000`) y CBU/CVU de
+     22 dígitos (acepta espacios/guiones y los normaliza). El pedido incluye
+     importe, CBU y fecha/hora, y se aclara que es una solicitud.
    - Acciones rápidas `CARGAR` / `RETIRAR` / `SOPORTE`.
    - Botón `📲 Instalar app`.
 5. **PWA**
-   - Instalación con `beforeinstallprompt` y guía manual para iOS/Safari.
+   - Captura global de `beforeinstallprompt` con `preventDefault()` y
+     `appinstalled`; el botón ejecuta `prompt()` directamente cuando el evento
+     está disponible y no intercala pantallas.
+   - Guía manual paso a paso para iOS/Safari (Compartir → Agregar a pantalla
+     de inicio) y navegadores sin prompt.
+   - Detección de `display-mode: standalone` y `navigator.standalone` para
+     ocultar el botón cuando ya está instalada.
    - Notificaciones con estados `default`, `granted`, `denied`, `unsupported`
      y solicitud únicamente tras acción explícita.
-   - `public/manifest.json`: `name`/`short_name` “Ganamos”, `display: standalone`,
-     `background_color`/`theme_color` `#0D061A` e íconos 192/512/maskable.
+   - `public/manifest.json`: `name`/`short_name` “Ganamos”, `id`/`start_url`
+     `/`, `display: standalone`, `background_color`/`theme_color` `#0D061A`
+     e íconos 192/512/maskable.
 
 ## Contratos API esperados
 
@@ -96,6 +122,7 @@ desarrollo, `.env.example` incluye valores demo claramente identificados.
 
 - `public/img_ganamos_emblem.jpg` — isotipo oficial.
 - `public/img_ganamos_launcher.jpg` — emblema/wordmark de launcher.
+- `public/dog-avatar.jpg` — avatar circular del chat (perrito VIP).
 - `public/icons/` — iconos PWA 192, 512, maskable y apple-touch-icon.
 - `public/assets/aistudio/` — capturas y documento de referencia del diseño
   (no se precachean en el service worker).

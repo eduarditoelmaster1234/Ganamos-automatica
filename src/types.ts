@@ -44,7 +44,14 @@ export interface ChatMessage {
   timestampLabel: string
   deliveryStatus: MessageDeliveryStatus
   attachmentName?: string
+  /** Object URL de la imagen del comprobante, válida mientras el chat está montado. */
+  imagePreviewUrl?: string
 }
+
+export type ChatTimelineItem =
+  | { kind: 'message'; message: ChatMessage }
+  | { kind: 'deposit-card'; id: string }
+  | { kind: 'withdraw-card'; id: string }
 
 export interface ReceiptAttachment {
   file: File

@@ -75,6 +75,19 @@ export default function App() {
     setNotificationsOpen(true)
   }
 
+  /**
+   * En Android/Chrome el prompt nativo debe ejecutarse en el mismo gesto
+   * del usuario. Si el navegador no lo ofrece, se abre la guía manual
+   * (iOS/Safari o navegadores sin soporte).
+   */
+  const handleInstallClick = () => {
+    if (pwaInstall.canPrompt) {
+      void pwaInstall.promptInstall()
+      return
+    }
+    setInstallOpen(true)
+  }
+
   return (
     <>
       {(!account || destination === 'register') && (
@@ -101,7 +114,7 @@ export default function App() {
           backendReachable={backend.reachable}
           backendChecking={backend.checking}
           canInstall={!pwaInstall.isInstalled}
-          onRequestInstall={() => setInstallOpen(true)}
+          onInstallClick={handleInstallClick}
           onOpenNotifications={openNotifications}
           onOpenLegal={setLegalDocument}
           onSignOut={handleSignOut}

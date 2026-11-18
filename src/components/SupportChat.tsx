@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from 'react'
 
 import { appConfig, isBankDetailsConfigured } from '../config/appConfig'
 import { copyText } from '../lib/clipboard'
@@ -6,14 +14,29 @@ import { sendChatMessageToServer, uploadReceiptToServer } from '../lib/api'
 import type {
   ChatConnectionStatus,
   ChatMessage,
+  ChatTimelineItem,
   EphemeralCredentials,
   PlayerAccount,
   ReceiptAttachment,
   ReceiptUploadState,
 } from '../types'
-import { CloseIcon, FileIcon, ImageIcon, SendIcon, AttachIcon, UploadIcon, CheckCircleIcon, AlertIcon } from './icons'
+import {
+  AlertIcon,
+  AttachIcon,
+  CheckCircleIcon,
+  CloseIcon,
+  FileIcon,
+  ImageIcon,
+  SendIcon,
+  UploadIcon,
+} from './icons'
 
-const ALLOWED_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+const ALLOWED_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+])
 const MAX_RECEIPT_BYTES = 10 * 1024 * 1024
 
 const STATUS_COPY: Record<ChatConnectionStatus, { label: string; dot: string }> = {
@@ -64,36 +87,52 @@ function messageId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 }
 
+type WithdrawDelivery = 'sent' | 'local' | 'failed'
+
 export function SupportChat({
   account,
   credentials,
   online,
   backendReachable,
   backendChecking,
+  open,
   canInstall,
   onMinimize,
-  onRequestInstall,
+  onInstallClick,
 }: {
   account: PlayerAccount
   credentials: EphemeralCredentials | null
   online: boolean
   backendReachable: boolean
   backendChecking: boolean
+  open: boolean
   canInstall: boolean
   onMinimize: () => void
-  onRequestInstall: () => void
+  onInstallClick: () => void
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  // La tarjeta de CARGAR se inserta una sola vez al abrir el chat.
+  const [timeline, setTimeline] = useState<ChatTimelineItem[]>(() => [
+    { kind: 'deposit-card', id: 'deposit-card' },
+  ])
   const [composer, setComposer] = useState('')
   const [sending, setSending] = useState(false)
   const [receipt, setReceipt] = useState<ReceiptUploadState>({ kind: 'none' })
   const [showAttachmentOptions, setShowAttachmentOptions] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [depositFlash, setDepositFlash] = useState(false)
+  const [withdrawId, setWithdrawId] = useState<string | null>(null)
 
+  const scrollRef = useRef<HTMLDivElement>(null)
   const scrollAnchorRef = useRef<HTMLDivElement>(null)
+  const depositRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const copyTimer = useRef<number | null>(null)
+  const flashTimer = useRef<number | null>(null)
   const previewUrlRef = useRef<string | null>(null)
+  const messageUrlsRef = useRef<string[]>([])
+  const didInitialScroll = useRef(false)
+  const savedScrollTop = useRef(0)
+  const wasOpen = useRef(open)
 
   const bankDetails = appConfig.bankDetails
   const bankConfigured = isBankDetailsConfigured(bankDetails)
@@ -107,22 +146,58 @@ export function SupportChat({
   }, [online, account.isDemo, backendChecking, backendReachable])
 
   const canSend = composer.trim().length > 0 && !sending
+  const statusCopy = STATUS_COPY[connection]
 
   useEffect(() => {
+    if (!didInitialScroll.current) {
+      didInitialScroll.current = true
+      scrollRef.current?.scrollTo({ top: 0 })
+      return
+    }
     scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-  }, [messages.length, receipt.kind])
+  }, [timeline.length, receipt.kind])
 
-  useEffect(() => () => {
-    if (copyTimer.current) window.clearTimeout(copyTimer.current)
-    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
-  }, [])
+  // Guardamos la posición con cada scroll (display:none resetea scrollTop)
+  // y la restauramos al reabrir el chat.
+  useEffect(() => {
+    if (!wasOpen.current && open) {
+      const top = savedScrollTop.current
+      window.requestAnimationFrame(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = top
+      })
+    }
+    wasOpen.current = open
+  }, [open])
 
-  const addMessage = (message: ChatMessage) => {
-    setMessages((current) => [...current, message])
+  useEffect(
+    () => () => {
+      if (copyTimer.current) window.clearTimeout(copyTimer.current)
+      if (flashTimer.current) window.clearTimeout(flashTimer.current)
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current)
+      for (const url of messageUrlsRef.current) URL.revokeObjectURL(url)
+    },
+    [],
+  )
+
+  const appendMessage = (message: ChatMessage) => {
+    setTimeline((current) => [...current, { kind: 'message', message }])
+  }
+
+  const updateMessage = (
+    id: string,
+    updater: (message: ChatMessage) => ChatMessage,
+  ) => {
+    setTimeline((current) =>
+      current.map((item) =>
+        item.kind === 'message' && item.message.id === id
+          ? { kind: 'message', message: updater(item.message) }
+          : item,
+      ),
+    )
   }
 
   const addSystemInfo = (text: string) => {
-    addMessage({
+    appendMessage({
       id: messageId('local-info'),
       sender: 'system',
       text,
@@ -145,7 +220,7 @@ export function SupportChat({
     if (!text || sending) return
 
     if (connection !== 'online') {
-      addMessage({
+      appendMessage({
         id: messageId('local'),
         sender: 'user',
         text,
@@ -157,7 +232,7 @@ export function SupportChat({
     }
 
     const temporaryId = messageId('pending')
-    addMessage({
+    appendMessage({
       id: temporaryId,
       sender: 'user',
       text,
@@ -170,45 +245,99 @@ export function SupportChat({
     const result = await sendChatMessageToServer(text, topic, account.id)
     setSending(false)
 
-    setMessages((current) =>
-      current.map((message) => {
-        if (message.id !== temporaryId) return message
-        if (result) return result
-        return {
-          ...message,
-          timestampLabel: 'Sin conexión',
-          deliveryStatus: 'failed',
-        }
-      }),
+    updateMessage(temporaryId, (message) =>
+      result ?? { ...message, timestampLabel: 'Sin conexión', deliveryStatus: 'failed' },
     )
   }
 
-  const handleQuickAction = (action: 'deposit' | 'withdraw' | 'support') => {
-    const promptText =
-      action === 'deposit'
-        ? 'Quiero consultar los pasos para cargar saldo.'
-        : action === 'withdraw'
-          ? 'Quiero consultar los requisitos para retirar.'
-          : 'Necesito ayuda de soporte.'
+  const showDepositCard = () => {
+    setTimeline((current) =>
+      current.some((item) => item.kind === 'deposit-card')
+        ? current
+        : [{ kind: 'deposit-card', id: messageId('deposit') }, ...current],
+    )
+    setDepositFlash(true)
+    if (flashTimer.current) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setDepositFlash(false), 1400)
+    window.requestAnimationFrame(() => {
+      depositRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
 
-    if (connection === 'online') {
-      void sendMessage(promptText, action)
+  const showWithdrawCard = () => {
+    if (withdrawId) {
+      document
+        .getElementById(withdrawId)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    const id = messageId('withdraw')
+    setWithdrawId(id)
+    setTimeline((current) => [...current, { kind: 'withdraw-card', id }])
+  }
+
+  const handleQuickAction = (action: 'deposit' | 'withdraw' | 'support') => {
+    if (action === 'deposit') {
+      showDepositCard()
+      return
+    }
+    if (action === 'withdraw') {
+      showWithdrawCard()
       return
     }
 
-    let guidance: string
-    if (action === 'deposit') {
-      guidance = bankConfigured
-        ? `Para cargar, verificá los datos vigentes en la tarjeta superior (Titular: ${bankDetails.accountHolder}) y luego adjuntá tu comprobante cuando el servidor de soporte esté en línea.`
-        : 'Las instrucciones de carga estarán disponibles en cuanto el operador configure los datos bancarios y el canal de soporte en línea.'
-    } else if (action === 'withdraw') {
-      guidance =
-        'Para solicitar un retiro, soporte te pedirá confirmar tu usuario y un CBU/CVU o alias a tu nombre. Nunca compartas contraseñas ni códigos de verificación.'
-    } else {
-      guidance =
-        'El canal de soporte en vivo todavía no está conectado en este entorno. Podés revisar los avisos legales o intentar nuevamente cuando el servidor esté disponible.'
+    if (connection === 'online') {
+      void sendMessage('Necesito ayuda de soporte.', 'support')
+      return
     }
-    addSystemInfo(guidance)
+
+    addSystemInfo(
+      'El canal de soporte en vivo todavía no está conectado en este entorno. Podés revisar los avisos legales o intentar nuevamente cuando el servidor esté disponible.',
+    )
+  }
+
+  const submitWithdrawalRequest = async (text: string): Promise<WithdrawDelivery> => {
+    if (connection !== 'online') {
+      appendMessage({
+        id: messageId('withdraw-local'),
+        sender: 'user',
+        text,
+        timestampLabel: 'Guardado localmente',
+        deliveryStatus: 'local',
+      })
+      return 'local'
+    }
+
+    const temporaryId = messageId('withdraw-pending')
+    appendMessage({
+      id: temporaryId,
+      sender: 'user',
+      text,
+      timestampLabel: 'Enviando…',
+      deliveryStatus: 'sending',
+    })
+
+    const result = await sendChatMessageToServer(text, 'withdraw', account.id)
+    if (result) {
+      updateMessage(temporaryId, () => result)
+      return 'sent'
+    }
+
+    updateMessage(temporaryId, (message) => ({
+      ...message,
+      timestampLabel: 'Sin conexión',
+      deliveryStatus: 'failed',
+    }))
+    return 'failed'
+  }
+
+  const handleWithdrawSubmit = async (text: string): Promise<WithdrawDelivery> => {
+    const result = await submitWithdrawalRequest(text)
+    if (result !== 'failed') {
+      // Permite pedir un retiro nuevo más adelante sin reutilizar este formulario.
+      setWithdrawId(null)
+    }
+    return result
   }
 
   const onPickReceipt = () => {
@@ -234,7 +363,7 @@ export function SupportChat({
       setReceipt({
         kind: 'error',
         attachment,
-        message: 'Formato no compatible. Usá JPG, PNG o PDF.',
+        message: 'Formato no compatible. Usá JPG, PNG, WEBP o PDF.',
       })
       return
     }
@@ -270,17 +399,25 @@ export function SupportChat({
     const attachment = receipt.attachment
     setReceipt({ kind: 'uploading', attachment })
 
+    // La URL de la imagen elegida pasa a ser propiedad del mensaje del hilo.
+    const imageUrl = attachment.previewUrl
+    if (imageUrl) {
+      messageUrlsRef.current.push(imageUrl)
+      previewUrlRef.current = null
+    }
+
     if (connection === 'online') {
       const result = await uploadReceiptToServer(attachment, account.id)
       if (result.ok) {
         setReceipt({ kind: 'sent', attachment, locally: false })
-        addMessage({
+        appendMessage({
           id: messageId('receipt'),
           sender: 'user',
           text: 'Comprobante enviado para revisión',
           timestampLabel: 'Recibido por el servidor',
           deliveryStatus: 'sent',
           attachmentName: attachment.displayName,
+          imagePreviewUrl: imageUrl,
         })
       } else {
         setReceipt({
@@ -294,13 +431,14 @@ export function SupportChat({
     }
 
     setReceipt({ kind: 'sent', attachment, locally: true })
-    addMessage({
+    appendMessage({
       id: messageId('receipt-local'),
       sender: 'user',
       text: 'Comprobante guardado en este dispositivo',
-      timestampLabel: 'Sin conexión con el servidor',
+      timestampLabel: 'Recepción local · sin servidor',
       deliveryStatus: 'local',
       attachmentName: attachment.displayName,
+      imagePreviewUrl: imageUrl,
     })
   }
 
@@ -311,23 +449,32 @@ export function SupportChat({
     }
   }
 
-  const statusCopy = STATUS_COPY[connection]
-
   return (
     <section
       aria-label="Chat de soporte"
-      className="fixed inset-x-0 bottom-0 z-50 flex h-[86dvh] flex-col overflow-hidden rounded-t-[20px] bg-wa-cream shadow-floating animate-sheet-up min-[720px]:inset-x-auto min-[720px]:bottom-4 min-[720px]:right-4 min-[720px]:h-auto min-[720px]:max-h-[78vh] min-[720px]:w-[368px] min-[720px]:rounded-[20px] min-[720px]:animate-pop-in"
+      aria-hidden={!open}
+      className={`fixed inset-x-0 bottom-0 z-50 ${
+        open ? 'flex animate-sheet-up' : 'hidden'
+      } h-[86dvh] flex-col overflow-hidden rounded-t-[20px] bg-wa-cream shadow-floating min-[720px]:inset-x-auto min-[720px]:bottom-4 min-[720px]:right-4 min-[720px]:h-auto min-[720px]:max-h-[calc(100dvh-32px)] min-[720px]:w-[368px] min-[720px]:rounded-[20px] min-[720px]:animate-pop-in`}
     >
       {/* Header estilo WhatsApp */}
       <header className="flex shrink-0 items-center justify-between gap-2 bg-wa-header px-3 py-2">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-wa-avatar text-base font-bold text-white">
-            G
-          </div>
+          <img
+            src="/dog-avatar.jpg"
+            alt="Avatar de Ganamos"
+            width={38}
+            height={38}
+            draggable={false}
+            className="h-[38px] w-[38px] shrink-0 rounded-full object-cover ring-1 ring-white/25"
+          />
           <div className="min-w-0">
             <h2 className="font-display text-base font-bold leading-tight text-white">Chat</h2>
             <div className="flex items-center gap-1.5">
-              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${statusCopy.dot}`} aria-hidden />
+              <span
+                className={`h-[7px] w-[7px] shrink-0 rounded-full ${statusCopy.dot}`}
+                aria-hidden
+              />
               <span className="truncate text-[11px] text-white/90">{statusCopy.label}</span>
             </div>
           </div>
@@ -343,28 +490,53 @@ export function SupportChat({
       </header>
 
       {/* Conversación */}
-      <div className="thin-scrollbar chat-pattern min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <div
+        ref={scrollRef}
+        onScroll={(event) => {
+          savedScrollTop.current = event.currentTarget.scrollTop
+        }}
+        className="thin-scrollbar chat-pattern min-h-0 flex-1 overflow-y-auto px-3 py-3"
+      >
         <div className="flex justify-center">
           <span className="rounded-[10px] bg-wa-banner px-3 py-1.5 text-center text-[11px] font-medium text-wa-bannerText shadow-sm">
             {BANNER_COPY[connection]}
           </span>
         </div>
 
-        <TransferBubble
-          configured={bankConfigured}
-          minimumDepositLabel={bankDetails.minimumDepositLabel}
-          cbu={bankDetails.cbu}
-          alias={bankDetails.alias}
-          accountHolder={bankDetails.accountHolder}
-          copiedField={copiedField}
-          onCopy={handleCopy}
-          onUpload={onPickReceipt}
-        />
-
         <div className="mt-2.5 space-y-2.5">
-          {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
-          ))}
+          {timeline.map((item) => {
+            if (item.kind === 'deposit-card') {
+              return (
+                <div key={item.id} ref={depositRef}>
+                  <DepositCard
+                    configured={bankConfigured}
+                    minimumDepositLabel={bankDetails.minimumDepositLabel}
+                    cbu={bankDetails.cbu}
+                    alias={bankDetails.alias}
+                    accountHolder={bankDetails.accountHolder}
+                    copiedField={copiedField}
+                    flash={depositFlash}
+                    onCopy={handleCopy}
+                    onUpload={onPickReceipt}
+                  />
+                </div>
+              )
+            }
+
+            if (item.kind === 'withdraw-card') {
+              return (
+                <div key={item.id} id={item.id}>
+                  <WithdrawCard
+                    minimumAmount={appConfig.withdrawals.minimumAmount}
+                    minimumLabel={appConfig.withdrawals.minimumLabel}
+                    onSubmit={handleWithdrawSubmit}
+                  />
+                </div>
+              )
+            }
+
+            return <MessageBubble key={item.message.id} message={item.message} />
+          })}
         </div>
 
         <div ref={scrollAnchorRef} className="h-px w-full" aria-hidden />
@@ -440,7 +612,7 @@ export function SupportChat({
         <div className="shrink-0 bg-wa-composer px-2.5 pb-2">
           <button
             type="button"
-            onClick={onRequestInstall}
+            onClick={onInstallClick}
             className="flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-[10px] border border-wa-action/40 bg-white px-3 text-xs font-semibold text-wa-action transition hover:bg-wa-action/5 active:scale-[0.99]"
           >
             <span aria-hidden>📲</span> Instalar app
@@ -496,15 +668,16 @@ export function SupportChat({
 }
 
 /* ------------------------------------------------------------------ */
-/* Burbuja de transferencia                                            */
+/* Tarjeta de CARGAR                                                   */
 /* ------------------------------------------------------------------ */
-function TransferBubble({
+function DepositCard({
   configured,
   minimumDepositLabel,
   cbu,
   alias,
   accountHolder,
   copiedField,
+  flash,
   onCopy,
   onUpload,
 }: {
@@ -514,22 +687,25 @@ function TransferBubble({
   alias: string
   accountHolder: string
   copiedField: string | null
+  flash: boolean
   onCopy: (field: 'cbu' | 'alias') => void
   onUpload: () => void
 }) {
   return (
-    <article className="mt-2.5 w-full rounded-b-2xl rounded-tl-md rounded-tr-2xl bg-white p-3 shadow-sm">
+    <article
+      className={`w-full rounded-b-2xl rounded-tl-md rounded-tr-2xl bg-white p-3 shadow-sm ring-2 transition ${
+        flash ? 'ring-success-bright/60' : 'ring-transparent'
+      }`}
+    >
       <p className="text-sm leading-snug text-wa-text">
         Transferí a estos datos y después subí el comprobante 👇
       </p>
 
       {configured ? (
         <>
-          {minimumDepositLabel && (
-            <p className="mt-2 text-xs font-semibold text-wa-text">
-              Monto mínimo de carga: {minimumDepositLabel}
-            </p>
-          )}
+          <p className="mt-2 text-xs font-semibold text-wa-text">
+            Monto mínimo de carga: {minimumDepositLabel}
+          </p>
 
           <div className="mt-2 space-y-2 rounded-[10px] bg-wa-subcard px-2.5 py-2.5">
             <BankRow label="CBU" value={cbu} />
@@ -580,7 +756,9 @@ function BankRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-2">
       <span className="shrink-0 text-[11px] font-medium text-wa-secondary">{label}</span>
-      <span className="min-w-0 break-words text-right text-xs font-bold text-wa-text">{value}</span>
+      <span className="min-w-0 break-words text-right text-xs font-bold text-wa-text">
+        {value}
+      </span>
     </div>
   )
 }
@@ -610,6 +788,210 @@ function CopyOutlineButton({
 }
 
 /* ------------------------------------------------------------------ */
+/* Tarjeta interactiva de RETIRAR                                      */
+/* ------------------------------------------------------------------ */
+function WithdrawCard({
+  minimumAmount,
+  minimumLabel,
+  onSubmit,
+}: {
+  minimumAmount: number
+  minimumLabel: string
+  onSubmit: (text: string) => Promise<WithdrawDelivery>
+}) {
+  const [amount, setAmount] = useState('')
+  const [cbu, setCbu] = useState('')
+  const [amountError, setAmountError] = useState<string | null>(null)
+  const [cbuError, setCbuError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<WithdrawDelivery | null>(null)
+  const amountFieldId = useId()
+  const cbuFieldId = useId()
+
+  const validateAmount = (raw: string): { value: number | null; error: string | null } => {
+    const trimmed = raw.trim()
+    if (!trimmed) return { value: null, error: 'Ingresá el monto a retirar.' }
+    if (trimmed.includes('-')) {
+      return { value: null, error: 'El monto no puede ser negativo.' }
+    }
+    // Permite separadores de miles con puntos o espacios.
+    const digits = trimmed.replace(/[\s.]/g, '')
+    if (!/^\d+$/.test(digits)) {
+      return { value: null, error: 'Ingresá solo números, por ejemplo 200.000.' }
+    }
+    const value = Number(digits)
+    if (!Number.isFinite(value) || value <= 0) {
+      return { value: null, error: 'Ingresá un monto mayor a cero.' }
+    }
+    if (value < minimumAmount) {
+      return { value: null, error: `El retiro mínimo es ${minimumLabel}.` }
+    }
+    return { value, error: null }
+  }
+
+  const validateCbu = (raw: string): { value: string | null; error: string | null } => {
+    const normalized = raw.replace(/[\s-]/g, '')
+    if (!normalized) return { value: null, error: 'Ingresá tu CBU/CVU.' }
+    if (!/^\d+$/.test(normalized)) {
+      return { value: null, error: 'El CBU/CVU solo puede contener números.' }
+    }
+    if (normalized.length !== 22) {
+      return { value: null, error: 'El CBU/CVU debe tener 22 dígitos.' }
+    }
+    return { value: normalized, error: null }
+  }
+
+  const handleSubmit = async () => {
+    if (submitting) return
+    const amountResult = validateAmount(amount)
+    const cbuResult = validateCbu(cbu)
+    setAmountError(amountResult.error)
+    setCbuError(cbuResult.error)
+    if (amountResult.error || cbuResult.error || amountResult.value === null) return
+    if (!cbuResult.value) return
+
+    setSubmitting(true)
+    const formattedAmount = new Intl.NumberFormat('es-AR').format(amountResult.value)
+    const requestedAt = new Date().toLocaleString('es-AR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    })
+    const text = [
+      'Solicitud de retiro',
+      `Importe: $${formattedAmount}`,
+      `CBU/CVU: ${cbuResult.value}`,
+      `Fecha y hora: ${requestedAt}`,
+    ].join('\n')
+
+    const delivery = await onSubmit(text)
+    setSubmitting(false)
+    setResult(delivery)
+    if (delivery === 'failed') {
+      setAmountError('No se pudo enviar el pedido. Revisá tu conexión e intentá otra vez.')
+    }
+  }
+
+  if (result && result !== 'failed') {
+    return (
+      <article className="w-full rounded-b-2xl rounded-tl-md rounded-tr-2xl bg-white p-3 shadow-sm">
+        <div className="flex items-start gap-2">
+          <CheckCircleIcon
+            width={18}
+            height={18}
+            className="mt-0.5 shrink-0 text-success"
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-wa-text">Solicitud enviada ✓</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-wa-secondary">
+              {result === 'sent'
+                ? 'El pedido de retiro quedó registrado en el chat. La aprobación depende de la validación del operador.'
+                : 'El pedido quedó guardado en este dispositivo. Todavía no fue enviado al servidor.'}
+            </p>
+          </div>
+        </div>
+      </article>
+    )
+  }
+
+  return (
+    <article className="w-full rounded-b-2xl rounded-tl-md rounded-tr-2xl bg-white p-3 shadow-sm">
+      <p className="text-sm font-semibold leading-snug text-wa-text">
+        Completá el monto a retirar y tu CBU 👇
+      </p>
+
+      <div className="mt-2 flex items-center justify-between gap-2 rounded-[10px] border border-[#B7EBC9] bg-[#E7F8EE] px-3 py-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-[#0F5132]">
+          SALDO ACTUAL
+        </span>
+        <span className="font-display text-sm font-extrabold text-[#0F5132]">$0</span>
+      </div>
+
+      <div className="mt-2.5">
+        <label
+          htmlFor={amountFieldId}
+          className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-wa-secondary"
+        >
+          RETIRAR
+        </label>
+        <input
+          id={amountFieldId}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={amount}
+          onChange={(event) => {
+            setAmount(event.target.value)
+            setAmountError(null)
+            setResult(null)
+          }}
+          placeholder="Monto a retirar (ej: 200.000)"
+          aria-invalid={Boolean(amountError)}
+          className={`h-[46px] w-full rounded-[10px] border bg-white px-3 text-sm text-wa-text outline-none transition placeholder:text-wa-secondary ${
+            amountError ? 'border-danger' : 'border-wa-divider focus:border-wa-action'
+          }`}
+        />
+        <p className="mt-1 text-[11px] text-wa-secondary">Retiro mínimo: {minimumLabel}</p>
+        {amountError && (
+          <p className="mt-1 text-[11px] font-medium text-danger" role="alert">
+            {amountError}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-2.5">
+        <label
+          htmlFor={cbuFieldId}
+          className="mb-1 block text-[11px] font-bold uppercase tracking-wide text-wa-secondary"
+        >
+          CBU
+        </label>
+        <input
+          id={cbuFieldId}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          value={cbu}
+          onChange={(event) => {
+            setCbu(event.target.value)
+            setCbuError(null)
+            setResult(null)
+          }}
+          placeholder="Ingresá tu CBU/CVU"
+          aria-invalid={Boolean(cbuError)}
+          className={`h-[46px] w-full rounded-[10px] border bg-white px-3 text-sm text-wa-text outline-none transition placeholder:text-wa-secondary ${
+            cbuError ? 'border-danger' : 'border-wa-divider focus:border-wa-action'
+          }`}
+        />
+        {cbuError && (
+          <p className="mt-1 text-[11px] font-medium text-danger" role="alert">
+            {cbuError}
+          </p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => void handleSubmit()}
+        disabled={submitting}
+        className="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-[10px] bg-success-bright px-3 text-sm font-bold text-white transition hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {submitting ? (
+          <span
+            className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+            aria-hidden
+          />
+        ) : null}
+        Enviar pedido de retiro
+      </button>
+
+      <p className="mt-2 text-[10px] leading-snug text-wa-secondary">
+        El pedido queda como solicitud. No implica aprobación ni acreditación inmediata.
+      </p>
+    </article>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /* Burbujas de mensajes                                                */
 /* ------------------------------------------------------------------ */
 function MessageBubble({ message }: { message: ChatMessage }) {
@@ -630,9 +1012,16 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             : 'rounded-tl-[4px] rounded-tr-[14px] rounded-b-[14px] bg-white'
         }`}
       >
+        {message.imagePreviewUrl && (
+          <img
+            src={message.imagePreviewUrl}
+            alt={message.attachmentName ?? 'Comprobante adjunto'}
+            className="mb-1.5 max-h-56 w-full rounded-[10px] object-cover"
+          />
+        )}
         {message.attachmentName && (
           <p className="mb-0.5 text-[11px] font-bold text-wa-action">
-            Comprobante: {message.attachmentName}
+            {message.imagePreviewUrl ? 'Comprobante' : 'Archivo'}: {message.attachmentName}
           </p>
         )}
         <p className="whitespace-pre-wrap break-words text-sm leading-snug text-wa-text">
