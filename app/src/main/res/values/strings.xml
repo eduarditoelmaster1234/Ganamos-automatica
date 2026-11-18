@@ -1,0 +1,90 @@
+<resources>
+    <string name="app_name">Ganamos</string>
+
+    <!-- Brand & Accessibility -->
+    <string name="cd_brand_emblem">Isotipo oficial de Ganamos</string>
+    <string name="cd_brand_wordmark">Ganamos, ganamos.net</string>
+    <string name="cd_close">Cerrar</string>
+    <string name="cd_minimize">Minimizar</string>
+    <string name="cd_copy">Copiar</string>
+    <string name="cd_attach_receipt">Adjuntar comprobante</string>
+    <string name="cd_send_message">Enviar mensaje</string>
+    <string name="cd_open_chat">Abrir chat de soporte</string>
+    <string name="cd_account_menu">Opciones de credenciales</string>
+    <string name="cd_notifications">Notificaciones</string>
+
+    <!-- Pantalla 1: Crear cuenta -->
+    <string name="register_title">Creá tu cuenta gratis</string>
+    <string name="register_subtitle">Estamos Online 24hs!</string>
+    <string name="register_name_label">Nombre o apodo</string>
+    <string name="register_name_placeholder">Ingresá tu nombre o apodo</string>
+    <string name="register_cta">CREAR MI CUENTA · +18</string>
+    <string name="register_cta_loading">CREANDO CUENTA…</string>
+    <string name="register_security_caption">Registro seguro · sin tarjeta · gratis</string>
+    <string name="register_error_empty">Ingresá tu nombre o apodo para continuar.</string>
+    <string name="register_error_short">Debe tener al menos 3 caracteres.</string>
+    <string name="register_error_long">No puede superar los 24 caracteres.</string>
+    <string name="register_error_chars">Usá solo letras, números, espacios o guiones.</string>
+    <string name="register_error_network">No pudimos crear tu cuenta. Revisá tu conexión e intentá nuevamente.</string>
+    <string name="register_error_server">El servidor no pudo confirmar el registro. Intentá de nuevo en unos instantes.</string>
+    <string name="register_backend_pending_title">Servidor de registro pendiente de configuración</string>
+    <string name="register_backend_pending_body">Este entorno todavía no tiene configurada la URL de API. Podés probar el recorrido completo en modo demostración.</string>
+    <string name="register_demo_cta">Explorar en modo demostración</string>
+    <string name="demo_mode_badge">Modo demostración</string>
+    <string name="demo_mode_banner">Estás viendo una vista previa local. No crea cuentas reales ni habilita transferencias.</string>
+
+    <!-- Legal & Responsible Gaming -->
+    <string name="legal_privacy">Privacidad</string>
+    <string name="legal_terms">Términos</string>
+    <string name="legal_cookies">Cookies</string>
+    <string name="legal_responsible">Juego Responsable</string>
+
+    <!-- Pantalla 2: Cuenta creada -->
+    <string name="created_title">¡Cuenta creada!</string>
+    <string name="created_demo_title">¡Cuenta creada! (Demo)</string>
+    <string name="created_username_label">USUARIO</string>
+    <string name="created_password_label">CLAVE</string>
+    <string name="created_password_note">Guardala en un lugar seguro. Por seguridad, no se almacena en el disco del dispositivo.</string>
+    <string name="created_copy_username">Copiar usuario</string>
+    <string name="created_copy_password">Copiar clave</string>
+    <string name="created_copied">¡Copiado! ✓</string>
+    <string name="created_continue_cta">Continuar a mi cuenta</string>
+    <string name="created_helper">Guardá tus datos para volver a entrar cuando quieras</string>
+
+    <!-- Plataforma integrada -->
+    <string name="platform_open_cta">Abrir en navegador</string>
+    <string name="platform_retry_cta">Reintentar</string>
+    <string name="platform_embed_error_title">No pudimos cargar ganamos.net acá</string>
+    <string name="platform_embed_error_body">El sitio externo bloqueó la carga o no hay conexión disponible en este momento.</string>
+    <string name="platform_sign_out">Cerrar sesión</string>
+
+    <!-- Chat estilo WhatsApp -->
+    <string name="chat_title">Chat</string>
+    <string name="chat_status_online">en línea</string>
+    <string name="chat_status_connecting">conectando…</string>
+    <string name="chat_status_offline">sin conexión</string>
+    <string name="chat_status_demo">modo demostración</string>
+    <string name="chat_status_pending">configuración pendiente</string>
+    <string name="chat_banner_connected">Conectado. Escribinos y te respondemos.</string>
+    <string name="chat_banner_demo">Modo demostración · Sin conexión con el servidor real.</string>
+    <string name="chat_banner_offline">Sin conexión a internet. Revisá tu red.</string>
+    <string name="chat_banner_pending">Canal pendiente de configuración del servidor.</string>
+    <string name="chat_transfer_intro">Transferí a estos datos y después subí el comprobante 👇</string>
+    <string name="chat_action_deposit">CARGAR</string>
+    <string name="chat_action_withdraw">RETIRAR</string>
+    <string name="chat_action_support">SOPORTE</string>
+    <string name="chat_composer_placeholder">Escribí un mensaje…</string>
+    <string name="chat_upload_receipt_cta">SUBIR COMPROBANTE</string>
+    <string name="chat_copy_cbu">Copiar CBU</string>
+    <string name="chat_copy_alias">Copiar ALIAS</string>
+    <string name="chat_bank_pending">Los datos bancarios aún no fueron configurados por el operador en AppConfig / servidor.</string>
+    <string name="chat_bank_verify_notice">Verificá siempre el titular antes de transferir. La acreditación depende de la validación del operador.</string>
+
+    <!-- Notificaciones -->
+    <string name="notif_title">Notificaciones</string>
+    <string name="notif_activate_cta">Activar notificaciones</string>
+    <string name="notif_later_cta">Ahora no</string>
+    <string name="notif_granted_title">Notificaciones activadas</string>
+    <string name="notif_denied_title">Permiso de notificaciones desactivado</string>
+    <string name="notif_open_settings">Abrir ajustes del sistema</string>
+</resources>

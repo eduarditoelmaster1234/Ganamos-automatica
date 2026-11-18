@@ -1,0 +1,762 @@
+## Construcción de una PWA mobile-first original, profesional y lista para producción
+
+Actuá como un equipo senior compuesto por: Product Designer UX/UI,
+arquitecto frontend, ingeniero React/TypeScript, especialista PWA, QA y
+especialista en accesibilidad y seguridad web. Tu tarea es analizar el
+proyecto disponible y construir o mejorar **Ganamos**, una Progressive
+Web App (PWA) mobile-first para `ganamos.net`.
+
+El resultado debe ser una aplicación consistente, rápida, accesible,
+mantenible y visualmente original. Las imágenes adjuntas son
+**referencias de flujo, jerarquía y atmósfera cromática**, no diseños
+para copiar. No reproduzcas literalmente su composición, ilustraciones,
+banners, textos, distribución, iconografía, identidad ni elementos
+distintivos de terceros. Creá un lenguaje visual propio para Ganamos.
+
+------------------------------------------------------------------------
+
+# 0. REGLAS DE TRABAJO OBLIGATORIAS
+
+1.  **Inspeccioná primero el proyecto existente.** Antes de modificar,
+    identificá framework, estructura, dependencias, rutas, componentes,
+    estilos, assets, servicios, variables de entorno, backend
+    disponible, PWA y pruebas.
+2.  No reemplaces ni elimines funcionalidades existentes que no estén
+    expresamente incluidas en el alcance. Conservá navegación,
+    comportamiento, contenido, integraciones y diseño existente cuando
+    no haya una instrucción concreta para cambiarlos.
+3.  No supongas endpoints, contratos API, autenticación, proveedor de
+    chat, datos bancarios, políticas comerciales ni infraestructura.
+    Buscá su definición en el proyecto. Si no existen, implementá
+    interfaces/adaptadores y estados de configuración pendiente;
+    documentá qué dato real debe proporcionar el propietario.
+4.  No inventes resultados de operaciones. Una cuenta solo está creada
+    cuando el backend confirma la operación. Una transferencia solo está
+    recibida cuando un sistema autorizado la confirma. Un mensaje o
+    comprobante solo fue enviado cuando el servidor responde
+    satisfactoriamente.
+5.  No agregues credenciales reales, secretos, tokens, claves privadas,
+    datos bancarios productivos ni contraseñas en el código cliente,
+    repositorio o `localStorage`.
+6.  No uses credenciales ficticias como fallback de producción. Si el
+    backend no está disponible, mostrale al usuario un estado de error
+    recuperable o un **modo demostración claramente identificado**, sin
+    presentarlo como una cuenta real.
+7.  No intentes eludir restricciones de `iframe`, CORS, CSP,
+    autenticación o seguridad de un sitio externo. Si el sitio de
+    plataforma no permite ser embebido, ofrecé una acción clara para
+    abrirlo en una pestaña o ventana segura.
+8.  No afirmes que una app descargada desde cualquier origen es "100%
+    segura", ni indiques ignorar advertencias de seguridad del sistema.
+    Mostrá instrucciones de instalación honestas y dependientes del
+    navegador/dispositivo.
+9.  Solicitá permisos de notificación solo después de una acción
+    explícita, explicando para qué se usarán. Nunca solicites permisos
+    al cargar la página ni intentes forzar cambios desde la
+    configuración del sistema.
+10. La aplicación puede contener flujos relacionados con juegos de azar.
+    Implementá controles de edad, información de juego responsable y
+    avisos legales configurables. No uses mensajes que prometan
+    ganancias, resultados garantizados, bonos asegurados ni urgencia
+    engañosa. No presentes el producto como autorizado en una
+    jurisdicción sin que el propietario aporte y verifique la
+    documentación correspondiente.
+11. Antes de finalizar, ejecutá las comprobaciones disponibles: build,
+    lint, typecheck y tests. Corregí los errores introducidos por tus
+    cambios y entregá un resumen preciso de lo realizado y lo que
+    depende de configuración externa.
+
+Si falta información imprescindible, no la inventes: implementá el
+estado pendiente de forma segura y enumerá exactamente qué necesita el
+propietario.
+
+------------------------------------------------------------------------
+
+# 1. OBJETIVO DEL PRODUCTO
+
+Crear una PWA de marca **Ganamos** (`ganamos.net`) con estos recorridos
+principales:
+
+-   Registro inicial mediante un nombre o apodo.
+-   Confirmación de cuenta con credenciales devueltas por el backend, si
+    el sistema real utiliza ese mecanismo.
+-   Acceso a la plataforma principal mediante integración autorizada.
+-   Chat de soporte integrado, con acciones rápidas para consultas de
+    carga, retiro y soporte.
+-   Visualización de instrucciones y datos de transferencia configurados
+    por el operador, cuando corresponda.
+-   Envío seguro de comprobantes, si existe un endpoint real.
+-   Instalación PWA y gestión opcional de notificaciones.
+-   Persistencia de sesión y preferencias sin almacenar secretos
+    innecesarios.
+
+La experiencia debe ser sencilla para una persona que usa el teléfono
+con una sola mano. En escritorio debe aprovechar el espacio sin estirar
+interfaces móviles de manera artificial.
+
+## Principios de producto
+
+-   Claridad antes que decoración.
+-   Una acción primaria por pantalla.
+-   Estados de carga, éxito, error, vacío y desconexión explícitos.
+-   Texto breve, español rioplatense natural y consistente.
+-   Accesibilidad por teclado, lector de pantalla y contraste.
+-   Diseño responsive real, no una versión de escritorio reducida.
+-   No bloquear la navegación con modales repetitivos.
+-   No ocultar condiciones relevantes ni información de seguridad.
+
+------------------------------------------------------------------------
+
+# 2. REFERENCIAS VISUALES Y DIRECCIÓN CREATIVA
+
+Usá las siete imágenes adjuntas únicamente para entender el flujo
+general: registro, confirmación, acceso a plataforma, chat, instalación,
+notificaciones e icono.
+
+## Identidad propia
+
+-   Marca: **Ganamos**
+-   Dominio: `ganamos.net`
+-   Personalidad: tecnológica, nocturna, energética, confiable y clara.
+-   Estética: universo violeta profundo con acentos eléctricos,
+    superficies oscuras, iluminación controlada y detalles esmeralda
+    para acciones confirmadas.
+-   Evitá el exceso de brillos, gradientes saturados, bordes luminosos
+    en todos los elementos y efectos que compitan con el contenido.
+
+## Paleta base
+
+Definí tokens centralizados y usalos en toda la interfaz:
+
+-   `--color-bg`: `#0D061A`
+-   `--color-bg-elevated`: `#160C2B`
+-   `--color-surface`: `#1B1030`
+-   `--color-surface-strong`: `#24143D`
+-   `--color-border`: `rgba(168, 85, 247, 0.25)`
+-   `--color-primary`: `#8B5CF6`
+-   `--color-primary-strong`: `#7C3AED`
+-   `--color-primary-soft`: `#C084FC`
+-   `--color-success`: `#16A34A`
+-   `--color-success-bright`: `#22C55E`
+-   `--color-text`: `#F8F5FF`
+-   `--color-text-muted`: `#B8A9CC`
+-   `--color-text-subtle`: `#9383AA`
+-   `--color-danger`: `#EF4444`
+-   `--color-warning`: `#F59E0B`
+
+Los colores de éxito no deben utilizarse para simular operaciones
+financieras confirmadas si no existe confirmación del backend.
+
+## Tipografía y forma
+
+-   Preferencia: `Plus Jakarta Sans`; alternativa: `Inter`; fallback
+    sans-serif.
+-   Jerarquía tipográfica consistente: títulos fuertes, cuerpo legible y
+    etiquetas pequeñas sin perder contraste.
+-   Radios sugeridos: cards 20--26 px; controles 12--16 px; chips
+    completamente redondeados.
+-   Sombras suaves y localizadas. Usar glow solo en CTA principal, marca
+    o estados destacados.
+-   Respetar `prefers-reduced-motion`.
+-   Animaciones cortas, funcionales y no bloqueantes.
+
+## Logo y mascota originales
+
+Diseñá una identidad gráfica original para Ganamos. Puede explorarse un
+personaje felino o guardián fantástico estilizado, con gafas y detalles
+metálicos violetas/dorados, pero debe ser una ilustración nueva, no una
+recreación de la mascota de las referencias ni de personajes, marcas o
+franquicias existentes.
+
+No dibujes una ilustración compleja como un SVG improvisado con formas
+primitivas si el resultado es de baja calidad. Preferí: - un asset
+original generado o provisto por el propietario, optimizado en
+WebP/PNG; - un isotipo vectorial simple y propio para tamaños
+pequeños; - variantes para fondo oscuro, icono PWA y favicon.
+
+No uses logotipos de Ruby Play, Meta, Facebook, Instagram ni de otros
+terceros como si fueran parte de Ganamos. El nombre Ganamos debe tener
+tratamiento tipográfico propio.
+
+------------------------------------------------------------------------
+
+# 3. ARQUITECTURA Y CONFIGURACIÓN
+
+## Primero, adaptarse al repositorio
+
+No impongas una estructura nueva si el proyecto ya tiene una
+arquitectura funcional. Si se trata de un proyecto nuevo, usá una
+estructura modular equivalente a:
+
+``` text
+src/
+  app/
+  components/
+    brand/
+    layout/
+    ui/
+    chat/
+    forms/
+  features/
+    registration/
+    platform/
+    installation/
+    notifications/
+  services/
+    api/
+    auth/
+    chat/
+    uploads/
+  config/
+    appConfig.ts
+  hooks/
+  lib/
+  styles/
+  types/
+public/
+  icons/
+  manifest.webmanifest
+  sw.js
+design.md
+```
+
+Usá React + TypeScript + Tailwind CSS si esas tecnologías son
+compatibles con el proyecto y el entorno. No migres de stack sin una
+razón técnica concreta.
+
+## Configuración central
+
+Crear o adaptar `src/config/appConfig.ts`. Debe contener únicamente
+valores públicos y configurables:
+
+``` ts
+export const appConfig = {
+  brandName: "Ganamos",
+  domain: "ganamos.net",
+  platformUrl: import.meta.env.VITE_PLATFORM_URL ?? "https://ganamos.net",
+  apiUrl: import.meta.env.VITE_API_URL ?? "",
+  support: {
+    chatEnabled: Boolean(import.meta.env.VITE_CHAT_ENABLED),
+  },
+  bankDetails: {
+    cbu: import.meta.env.VITE_PUBLIC_BANK_CBU ?? "",
+    alias: import.meta.env.VITE_PUBLIC_BANK_ALIAS ?? "",
+    accountHolder: import.meta.env.VITE_PUBLIC_BANK_HOLDER ?? "",
+    minimumDepositLabel: import.meta.env.VITE_MIN_DEPOSIT_LABEL ?? "",
+  },
+} as const;
+```
+
+Ajustá la sintaxis al bundler real. No expongas secretos con prefijos
+públicos como `VITE_`. Los datos bancarios mostrados al usuario deben
+provenir de configuración verificada y ser editables por el operador. Si
+no están configurados, ocultá la tarjeta de transferencia y mostrale un
+mensaje de disponibilidad pendiente; nunca muestres valores ficticios.
+
+Creá `.env.example` con nombres de variables y valores vacíos o
+claramente ficticios. No sobrescribas `.env` real.
+
+## Contratos de integración
+
+Definí tipos TypeScript y servicios desacoplados para: -
+`registerPlayer` - `getCurrentSession` - `sendChatMessage` -
+`uploadReceipt` - `getChatHistory` - `getPublicPaymentInstructions`
+
+Antes de implementarlos, buscá contratos ya existentes en el proyecto.
+Si no hay backend, dejá un adaptador explícito `notConfigured` y una
+interfaz de servicio preparada para conectar el backend más adelante. No
+simules éxito.
+
+Ejemplo de respuesta de registro a adaptar al contrato real:
+
+``` ts
+type RegisterPlayerResult = {
+  success: true;
+  user: {
+    id: string;
+    username: string;
+    // Incluir password temporal solo si el backend real lo requiere.
+    temporaryPassword?: string;
+  };
+  session?: {
+    accessToken?: string;
+    expiresAt?: string;
+  };
+};
+```
+
+No asumas que el backend devolverá exactamente este formato: verificá el
+contrato antes de conectarlo.
+
+------------------------------------------------------------------------
+
+# 4. EXPERIENCIA Y PANTALLAS
+
+Implementá los estados como rutas o vistas bien definidas, con
+transiciones controladas. Evitá una única pantalla monolítica con
+múltiples condiciones mezcladas.
+
+## Estado A --- Registro
+
+### Objetivo
+
+Permitir iniciar el registro con la menor fricción posible, sin ocultar
+condiciones relevantes.
+
+### Diseño
+
+-   Fondo oscuro violeta con iluminación radial tenue.
+-   Card principal centrada; en móvil debe ocupar el ancho disponible
+    con márgenes seguros.
+-   Logo/isotipo original de Ganamos.
+-   Título: **"Creá tu cuenta"**.
+-   Subtítulo breve que explique el servicio sin prometer disponibilidad
+    o resultados que no puedan verificarse.
+-   Indicador de disponibilidad únicamente si existe una señal real del
+    backend. Si no existe, no mostrar "online 24 hs" como hecho.
+-   Campo de nombre o apodo, con etiqueta accesible persistente y
+    placeholder "Ingresá tu nombre o apodo".
+-   CTA: **"Crear mi cuenta"**.
+-   Texto de seguridad y condiciones debajo del CTA.
+-   Accesos a Privacidad, Términos, Cookies y Juego Responsable.
+-   Aviso de edad mínima y jurisdicción, configurable y revisado por el
+    operador.
+
+### Validación
+
+-   Campo obligatorio.
+-   Normalizar espacios al inicio/final.
+-   Validar longitud mínima/máxima razonable.
+-   Mostrar errores específicos junto al campo.
+-   Evitar dobles envíos con estado `loading`.
+-   Permitir reintentar si falla la red.
+-   No registrar datos sensibles en logs.
+
+### Acción
+
+Al enviar: 1. Capturar solo parámetros de atribución necesarios y
+permitidos: `utm_source`, `utm_campaign` y `fbclid`. 2. Generar o
+recuperar un `clientId` aleatorio y persistente, sin usarlo como secreto
+de autenticación. 3. Ejecutar `POST {apiUrl}/api/register-player`
+únicamente si la API está configurada y el endpoint está confirmado. 4.
+Enviar un payload tipado y validado, por ejemplo
+`{ clientId, name, utm_source, utm_campaign }`, ajustado al contrato
+real. 5. Validar respuesta y errores del servidor. 6. Pasar a
+confirmación únicamente si la operación fue confirmada. 7. Si no hay
+backend, mostrar un aviso de "Registro no disponible en este entorno" o
+un modo demo claramente rotulado. El modo demo no debe generar
+credenciales que parezcan válidas ni habilitar depósitos/retiros.
+
+**Prohibido:** fallback que invente usuarios como `omar49752`,
+contraseñas `123456`, o que muestre "Cuenta creada" ante un fallo de
+red.
+
+## Estado B --- Cuenta creada
+
+Mostrar esta pantalla solo con una respuesta exitosa del backend.
+
+-   Icono de éxito sobrio, con animación breve.
+-   Título: **"¡Cuenta creada!"**
+-   Bloque de usuario con etiqueta clara.
+-   Si el backend entrega una contraseña temporal, mostrarla solo si es
+    necesario y explicar que debe guardarse y cambiarse según el flujo
+    de seguridad del servicio.
+-   Botón de copiar independiente para cada dato disponible.
+-   Feedback accesible y temporal: "Copiado".
+-   CTA: **"Continuar a mi cuenta"**.
+-   Texto de ayuda para conservar los datos.
+-   No guardar contraseñas en texto plano en `localStorage`. Preferir
+    sesión segura administrada por backend y cookies `HttpOnly`,
+    `Secure`, `SameSite` cuando la arquitectura lo permita.
+-   Si una contraseña temporal debe mostrarse una sola vez, no volver a
+    recuperarla desde almacenamiento local.
+
+## Estado C --- Plataforma principal
+
+### Integración
+
+-   Usar `platformUrl` desde configuración.
+-   Antes de usar `iframe`, comprobar que la plataforma permite legal y
+    técnicamente el embebido.
+-   No intentar saltar `X-Frame-Options`, CSP, políticas de cookies o
+    restricciones de autenticación.
+-   Si el embebido está permitido, usar `iframe` con `title`,
+    dimensiones responsivas, política `sandbox` mínima compatible y
+    `referrerPolicy` apropiada. No agregar permisos innecesarios.
+-   Si no está permitido, mostrar una pantalla puente de marca con botón
+    **"Abrir Ganamos"** que navegue a la URL oficial en una pestaña
+    segura. Explicar que la plataforma se abrirá fuera de la PWA.
+-   Gestionar errores, carga y pérdida de conexión.
+
+### Header
+
+-   En móvil: compacto, con marca, acceso de usuario y botón de chat.
+-   En escritorio: navegación ampliada solo si el producto real dispone
+    de secciones verificadas.
+-   Menú de usuario con acciones para copiar identificador y cerrar
+    sesión.
+-   No inventar saldo, notificaciones, categorías o funcionalidades de
+    la plataforma externa.
+
+## Estado D --- Chat de soporte
+
+### Presentación responsive
+
+-   Móvil: bottom sheet de hasta `85dvh`, con cabecera fija, contenido
+    desplazable y composer fijo; permitir minimizar a burbuja.
+-   Escritorio: ventana flotante en esquina inferior derecha, con ancho
+    y alto limitados.
+-   Respetar safe areas de iOS y navegación del teclado virtual.
+-   Evitar que el chat tape CTA críticos o controles de navegación.
+
+### Cabecera
+
+-   Avatar original o inicial de marca.
+-   Título: "Chat".
+-   Estado de conexión real: "En línea", "Conectando..." o "Sin
+    conexión". No mostrar "En línea" si no hay conexión comprobada.
+-   Botón cerrar/minimizar accesible.
+
+### Mensaje inicial y datos de transferencia
+
+-   Obtener instrucciones de pago desde un servicio/configuración
+    validada.
+-   Mostrar CBU, alias, titular y monto mínimo solo si están
+    configurados y vigentes.
+-   Identificar claramente que son datos informativos y que el usuario
+    debe verificar el destinatario antes de transferir.
+-   Nunca incluir los datos bancarios de las capturas como valores de
+    producción.
+-   Botones "Copiar CBU" y "Copiar alias", con fallback compatible y
+    feedback.
+-   No afirmar que una transferencia fue acreditada por copiar datos o
+    enviar una captura.
+
+### Acciones rápidas
+
+-   **CARGAR:** presenta las instrucciones de carga configuradas.
+-   **RETIRAR:** abre un flujo informativo que explica los datos que el
+    soporte necesita, sin solicitar claves, códigos de autenticación ni
+    información bancaria innecesaria.
+-   **SOPORTE:** inicia una consulta libre.
+-   Las acciones deben enviar mensajes reales solo si el chat backend
+    está conectado. Si no, abrir un estado de configuración pendiente o
+    un canal de soporte verificado.
+
+### Comprobantes
+
+-   Botón "Adjuntar comprobante".
+-   Usar selector de archivos compatible con cámara/galería en móvil.
+-   Aceptar solo formatos permitidos (por ejemplo JPEG, PNG o PDF, según
+    backend), validar MIME real, tamaño máximo y dimensiones si
+    corresponde.
+-   Mostrar vista previa local antes de enviar.
+-   Permitir quitar o reemplazar el archivo.
+-   Subir mediante endpoint autenticado y transporte seguro.
+-   Mostrar estados: seleccionado, subiendo, enviado, error y
+    reintentar.
+-   La confirmación de recepción debe depender de una respuesta exitosa
+    del servidor.
+-   No guardar archivos sensibles en `localStorage`.
+-   No mostrar comprobantes de otros usuarios.
+
+### Composer
+
+-   Input con etiqueta accesible, botón adjuntar y botón enviar.
+-   Enter envía; Shift+Enter agrega línea en escritorio.
+-   En móvil, no ocultar el campo al abrir el teclado.
+-   Deshabilitar envío vacío y evitar duplicados.
+-   Mostrar hora/estado de mensajes si el backend proporciona esos
+    datos.
+-   Historial persistente solo mediante el servicio real; cache local
+    limitada y sin datos sensibles.
+
+### Instalación desde chat
+
+-   Botón "Instalar app" visible solo cuando corresponda.
+-   Ocultarlo si ya está instalada en modo standalone.
+-   Si el navegador no soporta instalación programática, mostrar
+    instrucciones manuales apropiadas.
+
+## Estado E --- Instalación PWA
+
+### Android/Chrome y navegadores compatibles
+
+-   Capturar `beforeinstallprompt` cuando esté disponible.
+-   Guardar el evento en memoria; no asumir que siempre se dispara.
+-   Al pulsar "Instalar app", invocar el prompt nativo.
+-   Respetar el resultado `accepted` o `dismissed`.
+-   No repetir modal inmediatamente si el usuario lo rechaza.
+
+### iOS/Safari
+
+-   No fingir que existe `beforeinstallprompt`.
+-   Mostrar guía visual: botón Compartir → "Agregar a pantalla de
+    inicio", adaptada a la versión de iOS cuando sea posible.
+-   Ofrecer "Continuar en el navegador".
+
+### Modal
+
+-   Logo propio, dominio y título "Instalá la app para entrar más
+    rápido".
+-   CTA principal contextual.
+-   Acción secundaria "Entrar sin instalar".
+-   Instrucciones precisas y honestas.
+-   No asegurar que cualquier advertencia de seguridad sea normal ni
+    pedir que se ignore.
+
+## Estado F --- Notificaciones
+
+-   No mostrar un modal que afirme "Tus notificaciones están bloqueadas"
+    si no se verificó `Notification.permission === "denied"`.
+-   Estados diferenciados:
+    -   `default`: explicar el beneficio y ofrecer activar.
+    -   `granted`: mostrar "Notificaciones activadas".
+    -   `denied`: explicar cómo revisar permisos en la configuración del
+        navegador/dispositivo, sin intentar abrir ajustes de forma no
+        soportada.
+    -   `unsupported`: informar que el navegador no las admite.
+-   Pedir permiso únicamente tras tocar un CTA explícito.
+-   `Notification.requestPermission()` debe ejecutarse en respuesta a
+    esa interacción.
+-   Para notificaciones push reales, implementar service worker,
+    suscripción Push API y backend VAPID. Si no hay backend, no simular
+    recepción de premios o bonos.
+-   Ofrecer "Ahora no" y respetar la decisión.
+-   No usar notificaciones para presionar al usuario a apostar,
+    depositar o perseguir pérdidas.
+
+------------------------------------------------------------------------
+
+# 5. PERSISTENCIA, SESIÓN Y PRIVACIDAD
+
+-   `clientId`: UUID aleatorio persistente si es necesario para
+    analítica/atribución; documentar su finalidad.
+-   Sesión: preferir cookies seguras `HttpOnly`, `Secure`, `SameSite`
+    administradas por backend.
+-   No almacenar contraseñas, tokens de acceso sensibles ni comprobantes
+    en `localStorage`.
+-   Guardar solo preferencias no sensibles: estado de onboarding, tema
+    si aplica, preferencia de chat minimizado y versión de avisos.
+-   Aplicar expiración, cierre de sesión y limpieza de datos según
+    política real.
+-   No almacenar más parámetros de tracking de los necesarios.
+-   No enviar PII en URLs.
+-   Informar de cookies/analítica según consentimiento y legislación
+    aplicable.
+-   Implementar protección contra XSS, CSRF, abuso de endpoints, spam y
+    cargas maliciosas en coordinación con backend.
+-   No registrar CBU completo, comprobantes ni credenciales en
+    telemetría.
+
+------------------------------------------------------------------------
+
+# 6. PWA Y ARCHIVOS DE INSTALACIÓN
+
+Crear o adaptar `public/manifest.webmanifest`:
+
+``` json
+{
+  "id": "/",
+  "name": "Ganamos",
+  "short_name": "Ganamos",
+  "description": "Acceso a Ganamos",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0D061A",
+  "theme_color": "#0D061A",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+```
+
+Verificá que los iconos existan y tengan los tamaños correctos. No uses
+una imagen estirada ni un recorte improvisado. Generá favicon, icono
+192, 512 y variantes maskable a partir de la identidad original
+aprobada.
+
+Además: - Service worker con estrategia de cache segura. - Cachear
+únicamente shell y assets estáticos. - No cachear respuestas privadas,
+datos bancarios personalizados, credenciales, chat privado ni
+comprobantes. - Estrategia de actualización que informe cuando haya una
+nueva versión y permita actualizar sin perder datos. - HTTPS obligatorio
+en producción. - Verificar `start_url`, `scope`, manifest, service
+worker e instalación. - No prometer funcionamiento offline de
+operaciones que requieren backend.
+
+------------------------------------------------------------------------
+
+# 7. RESPONSIVE, ACCESIBILIDAD Y MICROINTERACCIONES
+
+## Breakpoints
+
+Usá los breakpoints del proyecto si ya existen. Si no: - móvil pequeño:
+320--374 px; - móvil estándar: 375--767 px; - tablet: 768--1023 px; -
+escritorio: 1024 px en adelante.
+
+## Reglas
+
+-   Diseñar primero para 360--390 px.
+-   Controles táctiles de al menos 44×44 px.
+-   Usar `100dvh` con fallback razonable y safe areas.
+-   No generar scroll horizontal.
+-   En móvil, priorizar CTA y controles en zonas alcanzables.
+-   En escritorio, limitar ancho de lectura y evitar cards gigantes.
+-   Contraste WCAG AA como objetivo.
+-   Estados focus visibles.
+-   Labels reales, roles y nombres accesibles.
+-   Navegación por teclado y orden de foco lógico.
+-   No depender únicamente del color para comunicar estados.
+-   Respetar `prefers-reduced-motion`.
+
+## Motion
+
+-   Transiciones de 140--220 ms para hover/focus/press.
+-   Entrada de cards: fade + desplazamiento mínimo.
+-   Feedback de copia: cambio de etiqueta e icono, sin alertas
+    intrusivas.
+-   Bottom sheet con gesto solo si no interfiere con scroll ni
+    accesibilidad.
+-   No animar fondos de forma continua ni sacrificar rendimiento.
+
+------------------------------------------------------------------------
+
+# 8. CONTENIDO Y MICROCOPY
+
+Usá español argentino natural, claro y profesional: - "Creá tu cuenta" -
+"Ingresá tu nombre o apodo" - "Crear mi cuenta" - "¡Cuenta creada!" -
+"Copiar usuario" - "Copiar clave" (solo si existe y es necesaria) -
+"Continuar a mi cuenta" - "Chat" - "Cargar" - "Retirar" - "Soporte" -
+"Adjuntar comprobante" - "Instalar app" - "Entrar sin instalar" -
+"Activar notificaciones" - "Ahora no"
+
+No uses: - "Ganancia garantizada" - "Ganás seguro" - "100% seguro" sin
+evidencia verificable - "Bono asegurado" - mensajes que sugieran
+recuperar pérdidas o apostar compulsivamente.
+
+Todo texto legal debe ser contenido configurable y revisado por asesoría
+competente. No inventes licencias, números de autorización ni
+afiliaciones.
+
+------------------------------------------------------------------------
+
+# 9. ESTADOS Y MANEJO DE ERRORES
+
+Para cada acción asíncrona, diseñá: - idle; - loading; - success
+confirmado; - error recuperable; - offline; - not configured; -
+unauthorized/session expired, cuando aplique.
+
+Los mensajes deben explicar qué pasó y qué puede hacer el usuario. No
+mostrar errores técnicos crudos ni ocultar fallos.
+
+Ejemplos: - Registro: "No pudimos crear tu cuenta. Revisá tu conexión e
+intentá nuevamente." - Plataforma no embebible: "La plataforma se abrirá
+en una nueva pestaña." - Chat desconectado: "El chat no está disponible
+en este momento." - Comprobante: "No se pudo enviar el archivo. Podés
+intentarlo nuevamente." - Notificaciones no compatibles: "Este navegador
+no admite notificaciones web."
+
+------------------------------------------------------------------------
+
+# 10. PRUEBAS Y CRITERIOS DE ACEPTACIÓN
+
+No declares el trabajo terminado hasta comprobar, según lo que soporte
+el repositorio:
+
+## Calidad técnica
+
+-   Build de producción exitoso.
+-   TypeScript sin errores.
+-   Lint sin errores nuevos.
+-   Tests existentes aprobados.
+-   Sin dependencias innecesarias ni errores de consola introducidos.
+-   Variables de entorno documentadas.
+-   No hay secretos ni datos productivos hardcodeados.
+
+## Registro
+
+-   Validación de nombre.
+-   Doble clic no crea dos cuentas.
+-   Error backend no muestra éxito.
+-   Sin backend, el estado de configuración es claro.
+-   Cuenta confirmada solo por respuesta real.
+
+## Plataforma
+
+-   URL configurable.
+-   No se eluden políticas de iframe.
+-   Fallback a abrir sitio externo funciona.
+-   Errores y carga visibles.
+
+## Chat
+
+-   Abrir, minimizar, cerrar y reabrir.
+-   Acciones rápidas con comportamiento verificable.
+-   Copiado de datos solo cuando están configurados.
+-   Adjuntar, previsualizar, enviar y reintentar.
+-   No se confirma recepción sin respuesta del backend.
+-   Layout usable con teclado móvil.
+
+## PWA
+
+-   Manifest válido.
+-   Iconos correctos.
+-   Service worker registrado.
+-   Instalación contextual Android/Chrome.
+-   Instrucciones iOS sin simular prompt nativo.
+-   No aparecen botones de instalación si ya está instalada.
+
+## Notificaciones
+
+-   Permiso solicitado solo por acción.
+-   Estados `default`, `granted`, `denied` y `unsupported`.
+-   Sin promesas de notificaciones push si no hay infraestructura.
+
+## Diseño
+
+-   320 px, 360 px, 390 px, tablet y escritorio.
+-   Sin overflow horizontal.
+-   Contraste, foco y targets táctiles.
+-   `prefers-reduced-motion`.
+-   Identidad visual original, consistente y sin elementos copiados.
+
+------------------------------------------------------------------------
+
+# 11. ENTREGABLES
+
+1.  Aplicación implementada dentro de la estructura existente.
+2.  `design.md` completo con tokens, componentes, responsive, estados y
+    reglas visuales.
+3.  `README` o documentación equivalente con instalación, desarrollo,
+    build y variables de entorno.
+4.  `.env.example` sin secretos.
+5.  Manifest, service worker e iconos PWA válidos.
+6.  Tests o comprobaciones agregadas cuando corresponda.
+7.  Resumen final con:
+    -   archivos creados/modificados;
+    -   funcionalidades implementadas;
+    -   pruebas ejecutadas y resultado;
+    -   integraciones pendientes;
+    -   variables que el propietario debe configurar;
+    -   limitaciones conocidas.
+
+## Instrucción final
+
+Trabajá de forma incremental. Primero auditá y explicá brevemente la
+arquitectura detectada; después implementá el alcance sin romper lo
+existente; finalmente ejecutá las verificaciones y documentá resultados
+reales. Priorizá una solución mantenible y publicable por encima de una
+maqueta visual que simule operaciones reales.

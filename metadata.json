@@ -1,0 +1,6 @@
+{
+  "name": "Ganamos",
+  "description": "Aplicación oficial mobile-first de Ganamos (ganamos.net) con registro verificado, acceso seguro a la plataforma, soporte integrado y gestión transparente de notificaciones.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
