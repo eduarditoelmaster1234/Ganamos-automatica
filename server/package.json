@@ -1,0 +1,23 @@
+{
+  "name": "ganamos-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend de Ganamos: registro de jugadores y saldo real del panel de agentes",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.1.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/multipart": "^9.2.1",
+    "@fastify/rate-limit": "^10.3.0",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.6.2"
+  }
+}
