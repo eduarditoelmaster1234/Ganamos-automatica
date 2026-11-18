@@ -49,12 +49,6 @@ export const appConfig = {
     minimumAmount: 10000,
     minimumLabel: '$10.000',
   } satisfies WithdrawalRules,
-  /**
-   * Clave provisoria del flujo local/fallback.
-   * El backend, cuando responde, conserva la clave que él emite:
-   * no se reemplaza silenciosamente una credencial real.
-   */
-  localFallbackPassword: '12345a',
   jurisdictionNotice:
     clean(env.VITE_JURISDICTION_NOTICE) ||
     'Servicio disponible únicamente para mayores de 18 años.',

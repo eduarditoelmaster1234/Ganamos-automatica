@@ -1,12 +1,54 @@
 {
   "version": 2,
   "skills": {
+    "api-testing": {
+      "source": "oakoss/agent-skills",
+      "commit": "85e3a3919d9e0ec7f7302a5143ec4b3e66f5f6ad",
+      "sourceType": "github",
+      "skillPath": "skills/api-testing/SKILL.md",
+      "computedHash": "b2f38518eedce723a1594d7526e85594c2d03f54c9f2d6f8ba258c8c464114bb"
+    },
+    "fastify-best-practices": {
+      "source": "mcollina/skills",
+      "commit": "c75d70dbfbe991d8cec42aeda0b64ff14fbb9ac7",
+      "sourceType": "github",
+      "skillPath": "skills/fastify/SKILL.md",
+      "computedHash": "1e47aea2fa16ccb263e95202224d5d50cf7c782ddffa1fe1be40b98a2bd1e815"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "commit": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
       "sourceType": "github",
       "skillPath": "skills/frontend-design/SKILL.md",
       "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c"
+    },
+    "nodejs-backend-patterns": {
+      "source": "wshobson/agents",
+      "commit": "9c61ab243def98f72da12abd41cfcf5bcd91af9d",
+      "sourceType": "github",
+      "skillPath": "plugins/javascript-typescript/skills/nodejs-backend-patterns/SKILL.md",
+      "computedHash": "e478380e9c9d245d0c4caf6574d00934aca71fc62101e571262cdd26f958f4f1"
+    },
+    "playwright-e2e-testing": {
+      "source": "Perdolique/workflow",
+      "commit": "eb7d0f1afc3fa764028d1bf306a7a7a5010624f4",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-e2e-testing/SKILL.md",
+      "computedHash": "6e2d82eb4627d04957733abe45b7e3126839fb8e779d391690e5990d33dc748d"
+    },
+    "sc-lang-typescript": {
+      "source": "ersinkoc/security-check",
+      "commit": "6a7d7461ab8f4e9ea823bf77c4cf05c9671a9bf6",
+      "sourceType": "github",
+      "skillPath": "skills/sc-lang-typescript/SKILL.md",
+      "computedHash": "c3c8ad8cdc8c3e72698e79885c62d971267e3aef13a09d783a8701093e857137"
+    },
+    "tanstack-query": {
+      "source": "tanstack-skills/tanstack-skills",
+      "commit": "6f5521ecbdfbfa3d54d335eba6c8b4df0b804c03",
+      "sourceType": "github",
+      "skillPath": "plugins/tanstack-query/skills/tanstack-query/SKILL.md",
+      "computedHash": "b27696896a18acff7cb9099d753effb74bdf4b4339881f941fea4cca56abb1fa"
     }
   }
 }

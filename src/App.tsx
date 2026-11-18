@@ -47,6 +47,7 @@ export default function App() {
 
   const handleRegistered = (result: RegistrationResult) => {
     storage.saveAccount(result.account)
+    storage.savePlayerToken(result.token)
     storage.setOnboardingCompleted(false)
     storage.setChatMinimized(false)
     setAccount(result.account)

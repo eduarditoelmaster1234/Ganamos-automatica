@@ -8,15 +8,19 @@ import {
   type KeyboardEvent,
 } from 'react'
 
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+
 import { appConfig, isBankDetailsConfigured } from '../config/appConfig'
 import { copyText } from '../lib/clipboard'
-import { sendChatMessageToServer, uploadReceiptToServer } from '../lib/api'
+import { getPlayerBalance, sendChatMessageToServer, uploadReceiptToServer } from '../lib/api'
+import { storage } from '../lib/storage'
 import type {
   ChatConnectionStatus,
   ChatMessage,
   ChatTimelineItem,
   EphemeralCredentials,
   PlayerAccount,
+  PlayerBalance,
   ReceiptAttachment,
   ReceiptUploadState,
 } from '../types'
@@ -38,6 +42,18 @@ const ALLOWED_MIMES = new Set([
   'application/pdf',
 ])
 const MAX_RECEIPT_BYTES = 10 * 1024 * 1024
+
+const arsFormatter = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 2,
+})
+
+type WithdrawBalance =
+  | { status: 'loading' }
+  | { status: 'unavailable' }
+  | { status: 'available'; formatted: string; amount: number }
+  | { status: 'stale'; formatted: string; amount: number }
 
 const STATUS_COPY: Record<ChatConnectionStatus, { label: string; dot: string }> = {
   online: { label: 'en línea', dot: 'bg-success-bright' },
@@ -85,6 +101,23 @@ function nowLabel(): string {
 
 function messageId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function deriveBalance(
+  data: PlayerBalance | undefined,
+  isPending: boolean,
+  isError: boolean,
+): WithdrawBalance {
+  if (data) {
+    const amount = data.balance
+    const formatted = arsFormatter.format(amount)
+    const stale = isError || data.stale
+    return stale
+      ? { status: 'stale', formatted, amount }
+      : { status: 'available', formatted, amount }
+  }
+  if (isPending) return { status: 'loading' }
+  return { status: isError ? 'unavailable' : 'loading' }
 }
 
 type WithdrawDelivery = 'sent' | 'local' | 'failed'
@@ -136,6 +169,30 @@ export function SupportChat({
 
   const bankDetails = appConfig.bankDetails
   const bankConfigured = isBankDetailsConfigured(bankDetails)
+
+  const hasWithdrawCard = withdrawId !== null
+  const hasServerAccount = account.source === 'server' && Boolean(storage.getPlayerToken())
+
+  const balanceQuery = useQuery({
+    queryKey: ['player-balance', account.id],
+    queryFn: () => getPlayerBalance(),
+    enabled: open && hasServerAccount,
+    placeholderData: keepPreviousData,
+    refetchInterval: open && hasServerAccount ? (hasWithdrawCard ? 3000 : 15000) : false,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+  })
+
+  const withdrawBalance: WithdrawBalance = hasServerAccount
+    ? deriveBalance(balanceQuery.data, balanceQuery.isPending, balanceQuery.isError)
+    : { status: 'unavailable' }
+
+  // Consulta inmediata al abrir el chat (y al reabrir desde el widget).
+  useEffect(() => {
+    if (open && hasServerAccount) void balanceQuery.refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   const connection: ChatConnectionStatus = useMemo(() => {
     if (!online) return 'offline'
@@ -274,6 +331,8 @@ export function SupportChat({
     const id = messageId('withdraw')
     setWithdrawId(id)
     setTimeline((current) => [...current, { kind: 'withdraw-card', id }])
+    // El saldo se actualiza inmediatamente al abrir RETIRAR.
+    if (hasServerAccount) void balanceQuery.refetch()
   }
 
   const handleQuickAction = (action: 'deposit' | 'withdraw' | 'support') => {
@@ -529,6 +588,7 @@ export function SupportChat({
                   <WithdrawCard
                     minimumAmount={appConfig.withdrawals.minimumAmount}
                     minimumLabel={appConfig.withdrawals.minimumLabel}
+                    balance={withdrawBalance}
                     onSubmit={handleWithdrawSubmit}
                   />
                 </div>
@@ -793,10 +853,12 @@ function CopyOutlineButton({
 function WithdrawCard({
   minimumAmount,
   minimumLabel,
+  balance,
   onSubmit,
 }: {
   minimumAmount: number
   minimumLabel: string
+  balance: WithdrawBalance
   onSubmit: (text: string) => Promise<WithdrawDelivery>
 }) {
   const [amount, setAmount] = useState('')
@@ -849,6 +911,15 @@ function WithdrawCard({
     setCbuError(cbuResult.error)
     if (amountResult.error || cbuResult.error || amountResult.value === null) return
     if (!cbuResult.value) return
+
+    // Validación contra el saldo real cuando está disponible.
+    if (
+      (balance.status === 'available' || balance.status === 'stale') &&
+      amountResult.value > balance.amount
+    ) {
+      setAmountError(`El monto supera tu saldo disponible (${balance.formatted}).`)
+      return
+    }
 
     setSubmitting(true)
     const formattedAmount = new Intl.NumberFormat('es-AR').format(amountResult.value)
@@ -903,7 +974,20 @@ function WithdrawCard({
         <span className="text-[11px] font-bold uppercase tracking-wide text-[#0F5132]">
           SALDO ACTUAL
         </span>
-        <span className="font-display text-sm font-extrabold text-[#0F5132]">$0</span>
+        <span className="text-right">
+          <span className="font-display text-sm font-extrabold text-[#0F5132]">
+            {balance.status === 'loading'
+              ? 'Actualizando saldo...'
+              : balance.status === 'unavailable'
+                ? 'No disponible'
+                : balance.formatted}
+          </span>
+          {balance.status === 'stale' && (
+            <span className="block text-[9px] font-semibold text-[#8A5A00]">
+              · Desactualizado
+            </span>
+          )}
+        </span>
       </div>
 
       <div className="mt-2.5">

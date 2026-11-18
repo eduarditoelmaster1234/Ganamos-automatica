@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 
 import { appConfig } from '../config/appConfig'
-import { registerPlayer } from '../lib/api'
+import { ApiError, registerPlayer } from '../lib/api'
 import { storage } from '../lib/storage'
 import { NAME_ERROR_MESSAGES, validateName } from '../lib/validation'
 import type { LegalDocumentType, RegistrationResult } from '../types'
@@ -43,8 +43,12 @@ export function RegistrationScreen({
     try {
       const result = await registerPlayer(validation.normalized, storage.getAttribution())
       onRegistered(result)
-    } catch {
-      setError('Ocurrió un problema al registrar tu cuenta. Intentá de nuevo.')
+    } catch (error) {
+      setError(
+        error instanceof ApiError
+          ? error.message
+          : 'Ocurrió un problema al registrar tu cuenta. Intentá de nuevo.',
+      )
       setSubmitting(false)
     }
   }

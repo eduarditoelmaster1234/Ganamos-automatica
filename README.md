@@ -44,7 +44,6 @@ platformUrl: 'https://ganamos.net'
 apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000'
 bankDetails: { cbu, alias, accountHolder, minimumDepositLabel }
 withdrawals: { minimumAmount: 10000, minimumLabel: '$10.000' }
-localFallbackPassword: '12345a'
 ```
 
 Los datos bancarios salen siempre de `appConfig.bankDetails`: el chat no
@@ -53,10 +52,10 @@ pendiente y **no inventa datos**. Los defaults actuales corresponden a los
 datos públicos de transferencia del operador mostrados en las capturas de
 referencia y pueden sobreescribirse por entorno sin tocar el código.
 
-La clave del flujo local/fallback es fija (`12345a`) por pedido del operador.
-Cuando el backend responde, la app **no reemplaza** la contraseña emitida por
-el servidor: si en producción se exige una clave individual, hay que adaptar
-esa política en el backend antes de usar la clave fija.
+La contraseña del jugador la emite el backend (`PLAYER_PASSWORD`, default
+`12345a`). El frontend **nunca** inventa credenciales: si el backend no
+responde, el registro muestra un error claro y permite reintentar. Las
+credenciales del agente del panel viven solo en `server/.env`.
 
 ## Flujo implementado
 
@@ -65,13 +64,15 @@ esa política en el backend antes de usar la clave fija.
      3–24 caracteres, letras/números/espacios/guiones, colapso de espacios.
    - Captura de `utm_source`, `utm_medium`, `utm_campaign`, `utm_term`,
      `utm_content` y `fbclid` (first-touch, persistida en `localStorage`).
-   - `POST ${apiUrl}/api/register-player`. Si la API no responde, genera una
-     cuenta local de resguardo (sin simular confirmación del servidor).
-   - Persistencia de la cuenta y del `clientId` en `localStorage`.
+   - `POST ${apiUrl}/api/register-player`. El backend crea la cuenta real en el
+     panel de agentes y devuelve un token de acceso individual. Si el backend
+     no responde, se muestra un error y se permite reintentar (sin cuenta ficticia).
+   - Persistencia de la cuenta, el `clientId` y el token del jugador en
+     `localStorage`.
 2. **Cuenta creada** (`src/screens/AccountCreatedScreen.tsx`)
    - Check verde, `USUARIO` y `CLAVE` copiables en un toque con feedback
      “¡Copiado! ✓”, botón verde “Continuar a mi cuenta”.
-   - En modo local/fallback la clave mostrada es exactamente `12345a`.
+   - La clave mostrada es la que emitió el backend (`12345a`).
    - La clave temporal vive **solo en memoria**; nunca se persiste.
 3. **Plataforma** (`src/screens/PlatformScreen.tsx`)
    - `<iframe src="https://ganamos.net" />` a pantalla completa dentro de un
@@ -90,10 +91,13 @@ esa política en el backend antes de usar la clave fija.
      mínimo, “Copiar CBU”/“Copiar ALIAS” con `¡Copiado! ✓` y
      “SUBIR COMPROBANTE” (preview + imagen en el hilo; JPG/PNG/WebP/PDF,
      límite 10 MB). Sin backend se informa recepción local, nunca bancaria.
-   - Tarjeta interactiva de RETIRAR con `SALDO ACTUAL $0`, validación de monto
-     (obligatorio, numérico, sin negativos, mínimo `$10.000`) y CBU/CVU de
-     22 dígitos (acepta espacios/guiones y los normaliza). El pedido incluye
-     importe, CBU y fecha/hora, y se aclara que es una solicitud.
+   - Tarjeta interactiva de RETIRAR con `SALDO ACTUAL` dinámico (saldo real del
+     panel, actualizado al abrir el chat, al tocar RETIRAR, cada 3 s con la
+     tarjeta visible y cada 15 s con el chat abierto), validación de monto
+     (obligatorio, numérico, sin negativos, mínimo `$10.000`, sin superar el
+     saldo disponible) y CBU/CVU de 22 dígitos (acepta espacios/guiones y los
+     normaliza). El pedido incluye importe, CBU y fecha/hora, y se aclara que
+     es una solicitud.
    - Acciones rápidas `CARGAR` / `RETIRAR` / `SOPORTE`.
    - Botón `📲 Instalar app`.
 5. **PWA**
@@ -112,11 +116,24 @@ esa política en el backend antes de usar la clave fija.
 
 ## Contratos API esperados
 
-1. `GET /api/health` → `{ "ok": true, "chat_enabled": true }`
-2. `POST /api/register-player` → `{ "clientId", "name", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "fbclid" }`
-   → `{ "success": true, "user": { "id", "username", "temporaryPassword" } }`
-3. `POST /api/chat/messages` → `{ "clientId", "playerId", "text", "topic" }`
-4. `POST /api/chat/receipts` (multipart `clientId`, `playerId`, `file`)
+1. `GET /api/health` → `{ "ok": true, "chat_enabled": true, "agent_configured": true, "database": "ok", "time": "..." }`
+2. `POST /api/register-player` → `{ "clientId", "name", "utm_source", ... }`
+   → `{ "success": true, "user": { "id", "username", "temporaryPassword" }, "token": "<player token>" }`
+3. `GET /api/player-balance` (header `Authorization: Bearer <token>`)
+   → `{ "success": true, "username", "balance", "currency", "updatedAt", "stale" }`
+4. `POST /api/chat/messages` (con token) → `{ "clientId", "playerId", "text", "topic" }`
+5. `POST /api/chat/receipts` (multipart `clientId`, `playerId`, `file`, con token)
+
+## Backend (`server/`)
+
+Implementación Fastify + SQLite (`node:sqlite`) que registra jugadores reales en
+el panel de agentes y consulta el saldo. Ver `server/README.md` para la
+configuración, los endpoints, las pruebas y las limitaciones externas.
+
+- Instalar: `cd server && npm install`
+- Copiar `server/.env.example` a `server/.env` y completar `AGENT_USER` / `AGENT_PASS`.
+- Iniciar: `cd server && npm start` (health en `http://localhost:3000/api/health`).
+- Tests: `cd server && npm test` (26 casos con panel mock basado en el contrato real).
 
 ## Assets
 

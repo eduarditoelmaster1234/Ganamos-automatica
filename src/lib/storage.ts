@@ -7,6 +7,7 @@ import type {
 const KEYS = {
   clientId: 'ganamos.clientId',
   account: 'ganamos.account',
+  playerToken: 'ganamos.playerToken',
   onboardingCompleted: 'ganamos.onboardingCompleted',
   chatMinimized: 'ganamos.chatMinimized',
   notificationsDismissed: 'ganamos.notificationsDismissed',
@@ -52,6 +53,23 @@ export const storage = {
 
   saveAccount(account: PlayerAccount): void {
     writeJson(localStorage, KEYS.account, account)
+  },
+
+  getPlayerToken(): string | null {
+    try {
+      return localStorage.getItem(KEYS.playerToken)
+    } catch {
+      return null
+    }
+  },
+
+  savePlayerToken(token: string | null): void {
+    try {
+      if (token) localStorage.setItem(KEYS.playerToken, token)
+      else localStorage.removeItem(KEYS.playerToken)
+    } catch {
+      /* noop */
+    }
   },
 
   getOnboardingCompleted(): boolean {
@@ -134,6 +152,7 @@ export const storage = {
   clearSession(): void {
     try {
       localStorage.removeItem(KEYS.account)
+      localStorage.removeItem(KEYS.playerToken)
       localStorage.removeItem(KEYS.onboardingCompleted)
       localStorage.removeItem(KEYS.chatMinimized)
       localStorage.removeItem(KEYS.notificationsDismissed)

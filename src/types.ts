@@ -72,4 +72,15 @@ export interface RegistrationResult {
   account: PlayerAccount
   credentials: EphemeralCredentials
   source: 'server' | 'local'
+  /** Token de acceso individual emitido por el backend para autorizar saldo y chat. */
+  token: string | null
+}
+
+export interface PlayerBalance {
+  success: boolean
+  username: string
+  balance: number
+  currency: string
+  updatedAt: string
+  stale: boolean
 }
